@@ -21,17 +21,18 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email, password) => {
-        set({ isLoading: true, error: null })
-        try {
-          await signIn(email, password)
-          const user = await getCurrentUser()
-          set({ user, isLoading: false })
-        } catch (error: any) {
-          set({ error: error.message, isLoading: false })
-        }
-      },
-
+login: async (email, password) => {
+  set({ isLoading: true, error: null });
+  try {
+    await signIn(email, password);
+    const user = await getCurrentUser();
+    set({ user, isLoading: false });
+  } catch (error: any) {
+    set({ error: error.message, isLoading: false });
+    // 关键：重新抛出错误，让 LoginPage 知道登录失败
+    throw error;
+  }
+},
       register: async (email, password, username) => {
         set({ isLoading: true, error: null })
         try {
