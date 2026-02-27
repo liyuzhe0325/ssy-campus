@@ -13,30 +13,37 @@ const LoginPage = () => {
   const { login, register, isLoading, user } = useAuth()
   const navigate = useNavigate()
 
-  // 关键：监听 user 状态变化，一旦有用户信息就跳转到首页
+  // 监听 user 状态，登录成功后跳转
   useEffect(() => {
+    console.log('useEffect 触发, user:', user)
     if (user) {
+      console.log('用户已登录，准备跳转首页')
+      toast.success('登录成功，欢迎回来！')
       // 使用 replace 避免登录页留在历史记录中
       navigate('/', { replace: true })
-      // 可以加一个提示，但不是必须的
-      toast.success('登录成功，欢迎回来！')
     }
   }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('提交表单', { isLogin, email, password })
+
     try {
       if (isLogin) {
+        console.log('调用 login...')
         await login(email, password)
-        // 注意：这里不再手动调用 navigate，由上面的 useEffect 自动处理
+        console.log('login 调用成功，等待 useEffect 跳转')
         toast.success('登录成功！正在跳转...')
       } else {
+        console.log('调用 register...')
         await register(email, password, username)
+        console.log('register 调用成功')
         toast.success('注册成功！请检查邮箱验证。')
-        setIsLogin(true) // 切换到登录界面
+        setIsLogin(true)
         setPassword('')
       }
     } catch (error: any) {
+      console.error('登录/注册错误:', error)
       toast.error(error.message || '操作失败')
     }
   }
