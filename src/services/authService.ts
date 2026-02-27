@@ -29,6 +29,7 @@ export const getCurrentUser = async (): Promise<SessionUser | null> => {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) return null
 
+  // 从 profiles 表获取用户资料
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('*')
