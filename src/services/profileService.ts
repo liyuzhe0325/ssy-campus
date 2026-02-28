@@ -1,79 +1,44 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { SessionUser } from '@/types'
-import { getCurrentUser, signIn, signOut, signUp } from '@/services/authService'
+import { supabase } from '@/config/supabase'
+import { Profile } from '@/types'
 
-interface AuthState {
-  user: SessionUser | null
-  isLoading: boolean
-  error: string | null
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, username: string) => Promise<void>
-  logout: () => Promise<void>
-  loadUser: () => Promise<void>
-  setUser: (user: SessionUser | null) => void
+export const getProfile = async (userId: string): Promise<Profile | null> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  return data
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      isLoading: false,
-      error: null,
+export const updateProfile = async (userId: string, updates: Partial<Profile>) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select()
+    .single()
 
-      login: async (email, password) => {
-        set({ isLoading: true, error: null })
-        try {
-          // 1. 调用 Supabase 登录
-          await signIn(email, password)
-          // 2. 获取最新的用户资料（包括 profiles 表中的数据）
-          const user = await getCurrentUser()
-          // 3. 更新 Zustand 状态
-          set({ user, isLoading: false })
-        } catch (error: any) {
-          set({ error: error.message, isLoading: false })
-          // 4. 重新抛出错误，让调用者知道登录失败
-          throw error
-        }
-      },
+  if (error) throw error
+  return data
+}
 
-      register: async (email, password, username) => {
-        set({ isLoading: true, error: null })
-        try {
-          await signUp(email, password, username)
-          set({ isLoading: false })
-        } catch (error: any) {
-          set({ error: error.message, isLoading: false })
-          throw error
-        }
-      },
+export const uploadAvatar = async (userId: string, file: File) => {
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${userId}/${Date.now()}.${fileExt}`
 
-      logout: async () => {
-        set({ isLoading: true })
-        try {
-          await signOut()
-          set({ user: null, isLoading: false })
-        } catch (error: any) {
-          set({ error: error.message, isLoading: false })
-          throw error
-        }
-      },
+  const { error: uploadError } = await supabase.storage
+    .from('avatars')
+    .upload(fileName, file)
 
-      loadUser: async () => {
-        set({ isLoading: true })
-        try {
-          const user = await getCurrentUser()
-          set({ user, isLoading: false })
-        } catch (error: any) {
-          set({ error: error.message, isLoading: false })
-        }
-      },
+  if (uploadError) throw uploadError
 
-      setUser: (user) => set({ user }),
-    }),
-    {
-      name: 'auth-storage',
-      partialize: (state) => ({ user: state.user }),
-    }
-  )
-)
+  const { data: { publicUrl } } = supabase.storage
+    .from('avatars')
+    .getPublicUrl(fileName)
+
+  await updateProfile(userId, { avatar: publicUrl })
+
+  return publicUrl
+}
