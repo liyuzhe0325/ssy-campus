@@ -1,3 +1,6 @@
+import ArticlesPage from './pages/ArticlesPage'
+import ArticleDetailPage from './pages/ArticleDetailPage'
+import NewArticlePage from './pages/NewArticlePage'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
 import Layout from './components/layout/Layout'
@@ -18,6 +21,9 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<Layout />}>
+        <Route path="/articles" element={<ProtectedRoute><ArticlesPage /></ProtectedRoute>} />
+<Route path="/articles/:id" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+<Route path="/articles/new" element={<ProtectedRoute><NewArticlePage /></ProtectedRoute>} />
         <Route
           path="/"
           element={
