@@ -16,7 +16,7 @@ const Header = () => {
       <nav className="container mx-auto px-4 py-3 flex items-center justify-between">
         {/* 首页链接：网站标题 */}
         <Link to="/" className="text-xl font-bold text-primary-600">
-          省实验经验传承
+          省实验经验传承(首页）
         </Link>
 
         <div className="flex items-center space-x-4">
