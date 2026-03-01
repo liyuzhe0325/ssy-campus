@@ -2,16 +2,7 @@ import React from 'react'
 import Loading from './Loading'
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 
-    | 'primary' 
-    | 'secondary' 
-    | 'outline' 
-    | 'ghost' 
-    | 'danger'
-    | 'learning'   // 青蓝主题（学习类）
-    | 'interest'   // 活力橙主题（兴趣类）
-    | 'private'    // 神秘紫主题（树洞）
-    | 'official'   // 权威金主题（新闻）
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'learning' | 'interest' | 'private' | 'official'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
   icon?: React.ReactNode
@@ -34,11 +25,11 @@ const Button: React.FC<ButtonProps> = ({
   const baseClasses = 'global-btn'
 
   const variantClasses = {
-    primary: 'global-btn-primary',
-    secondary: 'global-btn-secondary',
-    outline: 'global-btn-outline',
-    ghost: 'global-btn-ghost',
-    danger: 'global-btn-danger',
+    primary: 'bg-primary-500 hover:bg-primary-600 text-white focus:ring-primary-500 shadow-lg shadow-primary-500/20',
+    secondary: 'bg-success-500 hover:bg-success-600 text-white focus:ring-success-500 shadow-lg shadow-success-500/20',
+    outline: 'border border-dark-600 hover:border-primary-500 text-gray-300 hover:text-white focus:ring-primary-500',
+    ghost: 'text-gray-400 hover:text-white hover:bg-dark-800 focus:ring-white/10',
+    danger: 'bg-danger hover:bg-red-600 text-white focus:ring-red-500',
     learning: 'bg-learning-500 hover:bg-learning-600 text-white focus:ring-learning-500 shadow-lg shadow-learning-500/20',
     interest: 'bg-interest-500 hover:bg-interest-600 text-white focus:ring-interest-500 shadow-lg shadow-interest-500/20',
     private: 'bg-private-500 hover:bg-private-600 text-white focus:ring-private-500 shadow-lg shadow-private-500/20',
