@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import {
@@ -11,7 +11,6 @@ const Layout = () => {
   const { user } = useAuthStore()
   const [profileExpand, setProfileExpand] = useState(false)
 
-  // 导航全面适配：在校生为主 + 毕业生为辅
   const navItems = [
     { icon: <HomeIcon className="w-5 h-5" />, label: '首页', path: '/' },
     { icon: <DocumentTextIcon className="w-5 h-5" />, label: '经验资料', path: '/articles' },
@@ -23,7 +22,6 @@ const Layout = () => {
 
   return (
     <div className="min-h-screen bg-[#0F1217] text-gray-200 flex overflow-hidden">
-      {/* 左侧固定侧边栏｜在校生友好版 */}
       <aside className="w-[220px] h-screen fixed left-0 top-0 bg-[#1A1F29] border-r border-gray-800 flex flex-col z-50">
         <div className="h-16 flex items-center px-6 border-b border-gray-800">
           <h1 className="text-lg font-bold text-white flex items-center gap-2">
@@ -32,20 +30,19 @@ const Layout = () => {
           </h1>
         </div>
 
-        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto scrollbar-thin">
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
           {navItems.map((item, index) => (
-            <a
+            <Link
               key={index}
-              href={item.path}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-[#252B3A] hover:text-white transition-all"
+              to={item.path}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-[#252B3A] hover:text-white transition-all duration-200"
             >
               {item.icon}
               <span className="text-sm font-medium">{item.label}</span>
-            </a>
+            </Link>
           ))}
         </nav>
 
-        {/* 个人中心（折叠隐藏扩展功能） */}
         <div className="border-t border-gray-800 p-3">
           <button
             onClick={() => setProfileExpand(!profileExpand)}
@@ -60,16 +57,15 @@ const Layout = () => {
 
           {profileExpand && (
             <div className="mt-1 ml-8 space-y-1 flex flex-col">
-              <a href="/profile" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">个人资料</a>
-              <a href="/digital-twin" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">数字孪生体</a>
-              <a href="/career-plan" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">成长规划</a>
-              <a href="/settings" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">系统设置</a>
+              <Link to="/profile" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">个人资料</Link>
+              <Link to="/digital-twin" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">数字孪生体</Link>
+              <Link to="/career-plan" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">成长规划</Link>
+              <Link to="/settings" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">系统设置</Link>
             </div>
           )}
         </div>
       </aside>
 
-      {/* 主内容区 */}
       <div className="flex-1 ml-[220px] flex flex-col">
         <header className="h-16 fixed left-[220px] right-0 top-0 bg-[#1A1F29]/80 backdrop-blur-md border-b border-gray-800 z-40 flex items-center justify-between px-8">
           <div className="text-sm text-gray-400">在校生·毕业生共同成长社区</div>
