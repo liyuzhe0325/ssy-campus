@@ -1,45 +1,50 @@
 import React from 'react'
-import { twMerge } from 'tailwind-merge'
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
-  helperText?: string
+  fullWidth?: boolean
+  icon?: React.ReactNode
 }
 
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, className, id, ...props }, ref) => {
-    const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`
+const Input: React.FC<InputProps> = ({
+  label,
+  error,
+  fullWidth = true,
+  icon,
+  className = '',
+  id,
+  ...props
+}) => {
+  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-')
 
-    return (
-      <div className="w-full">
-        {label && (
-          <label
-            htmlFor={inputId}
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            {label}
-          </label>
+  return (
+    <div className={`flex flex-col gap-1.5 ${fullWidth ? 'w-full' : ''}`}>
+      {label && (
+        <label htmlFor={inputId} className="text-sm font-medium text-text-secondary">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary">
+            {icon}
+          </div>
         )}
         <input
-          ref={ref}
           id={inputId}
-          className={twMerge(
-            'block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm',
-            error && 'border-red-300 focus:border-red-500 focus:ring-red-500',
-            className
-          )}
+          className={`
+            global-input
+            ${icon ? 'pl-10' : ''}
+            ${error ? 'border-danger focus:border-danger focus:ring-danger' : ''}
+            ${className}
+          `}
           {...props}
         />
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
-        {helperText && !error && (
-          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-        )}
       </div>
-    )
-  }
-)
-
-Input.displayName = 'Input'
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  )
+}
 
 export default Input
