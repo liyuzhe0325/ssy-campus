@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { signOut as logout } from '@/services/authService'  // 关键修改
+import { signOut } from '@/services/authService'
 import toast from 'react-hot-toast'
 import Button from '@/components/common/Button'
 import {
@@ -18,13 +18,13 @@ import {
 } from '@heroicons/react/24/outline'
 
 const Header: React.FC = () => {
-  const { user, profile } = useAuth()
+  const { user, profile, theme } = useAuth()
   const navigate = useNavigate()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const handleLogout = async () => {
     try {
-      await logout()
+      await signOut()
       toast.success('退出登录成功')
       navigate('/login')
     } catch (error: any) {
@@ -36,12 +36,10 @@ const Header: React.FC = () => {
     <header className="sticky top-0 z-40 glass border-b border-dark-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <span className="text-xl font-bold gradient-text">省实验传承</span>
           </Link>
 
-          {/* 搜索框 */}
           <div className="flex-1 max-w-md mx-8">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -53,28 +51,14 @@ const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* 右侧操作区 */}
           <div className="flex items-center gap-3">
-            {/* 快捷导航图标 */}
             <div className="hidden md:flex items-center gap-1">
-              <Link to="/">
-                <Button variant="ghost" size="sm" icon={<HomeIcon className="w-5 h-5" />} />
-              </Link>
-              <Link to="/articles">
-                <Button variant="ghost" size="sm" icon={<DocumentTextIcon className="w-5 h-5" />} />
-              </Link>
-              <Link to="/questions">
-                <Button variant="ghost" size="sm" icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />} />
-              </Link>
-              <Link to="/posts">
-                <Button variant="ghost" size="sm" icon={<UsersIcon className="w-5 h-5" />} />
-              </Link>
-              <Link to="/treehole">
-                <Button variant="ghost" size="sm" icon={<HeartIcon className="w-5 h-5" />} />
-              </Link>
-              <Link to="/news">
-                <Button variant="ghost" size="sm" icon={<NewspaperIcon className="w-5 h-5" />} />
-              </Link>
+              <Link to="/"><Button variant="ghost" size="sm" icon={<HomeIcon className="w-5 h-5" />} /></Link>
+              <Link to="/articles"><Button variant="ghost" size="sm" icon={<DocumentTextIcon className="w-5 h-5" />} /></Link>
+              <Link to="/questions"><Button variant="ghost" size="sm" icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />} /></Link>
+              <Link to="/posts"><Button variant="ghost" size="sm" icon={<UsersIcon className="w-5 h-5" />} /></Link>
+              <Link to="/treehole"><Button variant="ghost" size="sm" icon={<HeartIcon className="w-5 h-5" />} /></Link>
+              <Link to="/news"><Button variant="ghost" size="sm" icon={<NewspaperIcon className="w-5 h-5" />} /></Link>
             </div>
 
             <Link to="/messages">
@@ -83,7 +67,6 @@ const Header: React.FC = () => {
               </Button>
             </Link>
 
-            {/* 用户菜单 */}
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
