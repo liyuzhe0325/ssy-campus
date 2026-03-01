@@ -1,7 +1,3 @@
-// ============================
-// 校园新闻列表页（官方资讯）
-// ============================
-
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNews } from '@/hooks/useNews'
@@ -12,38 +8,70 @@ import Button from '@/components/common/Button'
 
 const NewsPage = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [page, setPage] = useState(1)
   const pageSize = 10
 
-  const { newsList, isLoadingNews, newsError, refetchNews } = useNews({ page, pageSize })
+  const { news, isLoading, error, refetch } = useNews({ page, pageSize })
 
-  if (isLoadingNews) return <div className="py-10 flex justify-center"><Loading /></div>
-  if (newsError) {
+  if (isLoading) {
     return (
-      <div className="py-10 text-center text-gray-400">
-        <p>新闻加载失败</p>
-        <Button variant="primary" onClick={refetchNews}>刷新</Button>
+      <div className="global-container py-10 flex justify-center">
+        <Loading />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="global-container py-10 text-center text-text-secondary">
+        <p>加载失败，请重试</p>
+        <Button className="mt-4" variant="primary" onClick={() => refetch()}>
+          刷新
+        </Button>
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">校园新闻</h1>
+    <div className="global-container max-w-3xl">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">校园新闻</h1>
+        {isAdmin && (
+          <Button variant="official" onClick={() => navigate('/news/new')}>
+            发布新闻
+          </Button>
+        )}
       </div>
 
       <div className="space-y-4">
-        {newsList.map(n => (
-          <NewsCard key={n.id} news={n} onClick={() => navigate(`/news/${n.id}`)} />
+        {news.map((item) => (
+          <NewsCard
+            key={item.id}
+            news={item}
+            onClick={() => navigate(`/news/${item.id}`)}
+          />
         ))}
+
+        {news.length === 0 && (
+          <div className="global-card text-center py-10 text-text-secondary">
+            <p>暂无新闻</p>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-center gap-3 mt-8">
-        <Button variant="ghost" disabled={page <= 1} onClick={() => setPage(page-1)}>上一页</Button>
-        <span className="text-gray-400">第{page}页</span>
-        <Button variant="ghost" disabled={newsList.length < pageSize} onClick={() => setPage(page+1)}>下一页</Button>
+        <Button variant="ghost" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>
+          上一页
+        </Button>
+        <span className="text-text-secondary">第 {page} 页</span>
+        <Button
+          variant="ghost"
+          disabled={news.length < pageSize}
+          onClick={() => setPage(p => p + 1)}
+        >
+          下一页
+        </Button>
       </div>
     </div>
   )
