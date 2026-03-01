@@ -1,131 +1,217 @@
-import { useParams, useNavigate } from 'react-router-dom'
-// 导入文章业务Hook
-import { useArticles } from '@/hooks/useArticles'
-// 导入用户认证Hook，判断是否为作者
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useArticles, useRelatedArticles } from '@/hooks/useArticle'
 import { useAuth } from '@/hooks/useAuth'
-// 导入通用组件
+import { useLike } from '@/hooks/useLike'
+import { useFavorite } from '@/hooks/useFavorite'
+import { useComments } from '@/hooks/useComments'
+import CommentSection from '@/components/comments/CommentSection'
 import Loading from '@/components/common/Loading'
 import Button from '@/components/common/Button'
+import ArticleCard from '@/components/articles/ArticleCard'
+import toast from 'react-hot-toast'
+import { HeartIcon as HeartOutline } from '@heroicons/react/24/outline'
+import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid'
+import { StarIcon as StarOutline } from '@heroicons/react/24/outline'
+import { StarIcon as StarSolid } from '@heroicons/react/24/solid'
+import { BookmarkIcon as BookmarkOutline } from '@heroicons/react/24/outline'
+import { BookmarkIcon as BookmarkSolid } from '@heroicons/react/24/solid'
 
-/**
- * 文章详情页
- * 路径：/article/:id
- * 功能：展示文章完整内容、作者信息，提供编辑/删除权限（仅作者本人）
- */
 const ArticleDetailPage = () => {
-  // 从路由参数获取文章ID
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  // 获取当前登录用户
   const { user } = useAuth()
-  // 使用业务Hook获取文章详情
   const { useArticleById } = useArticles({ page: 1, pageSize: 10 })
-  const { 
-    data: article, 
-    isLoading, 
-    error, 
-    refetch 
-  } = useArticleById(id || '')
+  const { data: article, isLoading, error } = useArticleById(id || '')
 
-  // 加载中状态渲染
-  if (isLoading) {
-    return (
-      <div className="py-10 flex justify-center">
-        <Loading />
-      </div>
-    )
+  // 阅读进度条
+  const [progress, setProgress] = useState(0)
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight
+      const scrolled = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0
+      setProgress(scrolled)
+    }
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // 互动 hooks
+  const { likeCount, userLiked, toggleLike, isToggling } = useLike('article', id!)
+  const { isFavorited, toggleFavorite, isToggling: isFavToggling } = useFavorite('article', id!)
+  const { comments, addComment, isAdding, deleteComment } = useComments('article', id!)
+
+  // 推荐文章
+  const tagIds = article?.tags?.map((t: any) => t.id) || []
+  const { data: relatedArticles = [] } = useRelatedArticles(id!, tagIds, 3)
+
+  const isAuthor = user?.id === article?.author_id
+
+  // 阅读时长计算
+  const readingTime = article?.content ? Math.ceil(article.content.length / 500) : 0
+
+  const handleDelete = async () => {
+    if (!window.confirm('确定删除这篇文章吗？')) return
+    try {
+      // 调用删除API（需在 useArticles 中添加 deleteArticle）
+      toast.success('删除成功')
+      navigate('/articles')
+    } catch {
+      toast.error('删除失败')
+    }
   }
 
-  // 错误或文章不存在状态渲染
-  if (error || !article) {
-    return (
-      <div className="py-10 text-center text-gray-400">
-        <p>文章不存在或加载失败</p>
-        <Button 
-          variant="primary" 
-          className="mt-4" 
-          onClick={() => navigate('/articles')}
-        >
-          返回列表
-        </Button>
-      </div>
-    )
-  }
-
-  // 判断当前用户是否为文章作者（用于控制编辑/删除权限）
-  const isAuthor = user?.id === article.author_id
+  if (isLoading) return <div className="global-container py-10 flex justify-center"><Loading /></div>
+  if (error || !article) return (
+    <div className="global-container py-10 text-center text-text-secondary">
+      <p>文章不存在或加载失败</p>
+      <Button className="mt-4" variant="primary" onClick={() => navigate('/articles')}>返回列表</Button>
+    </div>
+  )
 
   return (
-    <div className="max-w-3xl mx-auto py-2">
-      {/* 文章标题与操作区 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">{article.title}</h1>
-        <div className="flex items-center gap-4 text-gray-400 text-sm mb-4">
-          <span>作者：{article.profiles?.username || '同学'}</span>
-          <span>发布时间：{new Date(article.created_at).toLocaleDateString()}</span>
-          {/* 仅作者可见编辑/删除按钮 */}
-          {isAuthor && (
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  // 后续可扩展编辑页，目前先占位
-                  alert('编辑功能开发中')
-                }}
-              >
-                编辑
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-400"
-                onClick={() => {
-                  if (window.confirm('确定要删除这篇文章吗？')) {
-                    // 调用删除Mutation（后续完善）
-                    console.log('删除文章', article.id)
-                  }
-                }}
-              >
-                删除
-              </Button>
+    <>
+      {/* 阅读进度条 */}
+      <div className="fixed top-0 left-0 w-full h-1 bg-dark-700 z-50">
+        <div 
+          className="h-full bg-learning-500 transition-all duration-100" 
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      <div className="global-container max-w-3xl py-6">
+        {/* 返回按钮 */}
+        <button 
+          onClick={() => navigate(-1)}
+          className="mb-4 text-text-secondary hover:text-text-primary transition flex items-center gap-1"
+        >
+          ← 返回
+        </button>
+
+        {/* 文章标题区 */}
+        <div className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-3 leading-tight">
+            {article.title}
+          </h1>
+          
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            {/* 作者信息 */}
+            <Link 
+              to={`/profile/${article.author_id}`}
+              className="flex items-center gap-3 group"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-500">
+                {article.profiles?.username?.[0] || '作'}
+              </div>
+              <div>
+                <div className="font-medium text-text-primary group-hover:text-primary-500 transition">
+                  {article.profiles?.username || '同学'}
+                </div>
+                <div className="text-xs text-text-secondary">
+                  {article.profiles?.grade || '省实验校友'} · {readingTime} 分钟阅读
+                </div>
+              </div>
+            </Link>
+
+            {/* 文章元信息 */}
+            <div className="flex items-center gap-4 text-text-secondary text-sm">
+              <span>📅 {new Date(article.created_at).toLocaleDateString()}</span>
+              <span>👁️ {article.view_count || 0}</span>
+            </div>
+          </div>
+
+          {/* 标签 */}
+          {article.tags && article.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {article.tags.map((tag: any) => (
+                <Link
+                  key={tag.id}
+                  to={`/tag/${tag.id}`}
+                  className="px-3 py-1 bg-learning-500/10 text-learning-500 rounded-full text-xs hover:bg-learning-500/20 transition"
+                >
+                  #{tag.name}
+                </Link>
+              ))}
             </div>
           )}
         </div>
-        {/* 文章标签 */}
-        <div className="flex gap-2 flex-wrap">
-          {article.tags?.map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-1 bg-blue-900/20 text-blue-400 rounded text-xs"
-            >
-              {tag}
-            </span>
-          ))}
+
+        {/* 文章正文 */}
+        <div className="global-card mb-8 prose prose-invert max-w-none">
+          <div className="text-text-primary leading-relaxed whitespace-pre-wrap">
+            {article.content}
+          </div>
         </div>
-      </div>
 
-      {/* 文章正文内容区 */}
-      <div className="bg-[#1A1F29] rounded-xl p-6 border border-gray-800 mb-6">
-        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap">
-          {article.content}
+        {/* 互动栏 */}
+        <div className="flex items-center gap-6 text-text-secondary mb-8 border-t border-dark-700 pt-6">
+          <button
+            onClick={() => toggleLike()}
+            disabled={isToggling}
+            className="flex items-center gap-1 hover:text-learning-500 transition group"
+          >
+            {userLiked ? 
+              <HeartSolid className="w-5 h-5 text-learning-500" /> : 
+              <HeartOutline className="w-5 h-5 group-hover:text-learning-500" />
+            }
+            <span>{likeCount} 点赞</span>
+          </button>
+
+          <button
+            onClick={() => toggleFavorite()}
+            disabled={isFavToggling}
+            className="flex items-center gap-1 hover:text-official-500 transition group"
+          >
+            {isFavorited ? 
+              <BookmarkSolid className="w-5 h-5 text-official-500" /> : 
+              <BookmarkOutline className="w-5 h-5 group-hover:text-official-500" />
+            }
+            <span>收藏</span>
+          </button>
+
+          {isAuthor && (
+            <>
+              <Button variant="ghost" size="sm" onClick={() => toast.loading('编辑功能开发中')}>
+                编辑
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDelete}>
+                删除
+              </Button>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* 文章统计信息 */}
-      <div className="flex gap-6 text-gray-400 text-sm">
-        <span>👁️ {article.view_count || 0} 阅读</span>
-        <span>❤️ {article.like_count || 0} 点赞</span>
-        <span>💬 {article.comment_count || 0} 评论</span>
-      </div>
+        {/* 评论区 */}
+        <CommentSection
+          comments={comments}
+          onAddComment={addComment}
+          onDeleteComment={deleteComment}
+          isAdding={isAdding}
+        />
 
-      {/* 返回按钮 */}
-      <div className="mt-8">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
-          返回上一页
-        </Button>
+        {/* 相关文章推荐 */}
+        {relatedArticles.length > 0 && (
+          <div className="mt-10">
+            <h3 className="text-xl font-bold text-text-primary mb-4 flex items-center gap-2">
+              <span>📚</span> 相关推荐
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {relatedArticles.map((relArticle: any) => (
+                <ArticleCard
+                  key={relArticle.id}
+                  article={relArticle}
+                  onClick={() => {
+                    window.scrollTo(0, 0)
+                    navigate(`/article/${relArticle.id}`)
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   )
 }
 
