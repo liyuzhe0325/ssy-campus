@@ -1,83 +1,87 @@
-// ============================
-// 贴吧业务Hook：完全对齐useArticles/useQuestions/useDynamics结构
-// 缓存、加载、提交、删除状态统一管理
-// ============================
+import { usePosts } from '@/hooks/usePosts'
+import { useAuth } from '@/hooks/useAuth'
+import PostCard from '@/components/posts/PostCard'
+import Button from '@/components/common/Button'
+import Loading from '@/components/common/Loading'
+import { useNavigate } from 'react-router-dom'
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  getPosts,
-  getPostById,
-  createPost,
-  createReply,
-  deletePost,
-  type PostListParams,
-  type PostInsert,
-  type ReplyInsert
-} from '@/services/postService'
-import { useAuth } from './useAuth'
-
-export const usePosts = (params: PostListParams) => {
+const PostsPage = () => {
+  const navigate = useNavigate()
   const { user } = useAuth()
-  const queryClient = useQueryClient()
+  const pageSize = 10
 
-  // 帖子列表查询
   const {
-    data: posts = [],
-    isLoading: isLoadingPosts,
-    error: postsError,
-    refetch: refetchPosts
-  } = useQuery({
-    queryKey: ['posts', params],
-    queryFn: () => getPosts(params),
-    enabled: !!user,
-    staleTime: 4 * 60 * 1000,
-  })
+    data,
+    isLoading,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = usePosts(pageSize)
 
-  // 单贴详情查询
-  const usePostById = (id: string) => {
-    return useQuery({
-      queryKey: ['post', id],
-      queryFn: () => getPostById(id),
-      enabled: !!id && !!user,
-      staleTime: 8 * 60 * 1000,
-    })
+  // 将所有页的数据合并成一个数组
+  const posts = data?.pages.flatMap(page => page) ?? []
+
+  if (isLoading) {
+    return (
+      <div className="global-container py-10 flex justify-center">
+        <Loading />
+      </div>
+    )
   }
 
-  // 发帖Mutation
-  const createPostMutation = useMutation({
-    mutationFn: (data: PostInsert) => createPost(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
-  })
-
-  // 回复Mutation
-  const createReplyMutation = useMutation({
-    mutationFn: (data: ReplyInsert) => createReply(data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['post', variables.post_id] })
-    },
-  })
-
-  // 删帖Mutation
-  const deletePostMutation = useMutation({
-    mutationFn: (id: string) => deletePost(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['posts'] }),
-  })
-
-  return {
-    posts,
-    isLoadingPosts,
-    postsError,
-    refetchPosts,
-
-    usePostById,
-
-    createPost: createPostMutation.mutate,
-    isCreatingPost: createPostMutation.isPending,
-
-    createReply: createReplyMutation.mutate,
-    isCreatingReply: createReplyMutation.isPending,
-
-    deletePost: deletePostMutation.mutate,
-    isDeletingPost: deletePostMutation.isPending,
+  if (error) {
+    return (
+      <div className="global-container py-10 text-center text-text-secondary">
+        <p>加载失败，请重试</p>
+        <Button className="mt-4" variant="primary" onClick={() => window.location.reload()}>
+          刷新页面
+        </Button>
+      </div>
+    )
   }
+
+  return (
+    <div className="global-container max-w-3xl">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-text-primary">校园贴吧</h1>
+        {user && (
+          <Button variant="club" onClick={() => navigate('/post/new')}>
+            发布新帖
+          </Button>
+        )}
+      </div>
+
+      {posts.length === 0 ? (
+        <div className="global-card text-center py-10 text-text-secondary">
+          <p>暂无帖子，快来发布第一条吧！</p>
+          {user && (
+            <Button className="mt-4" variant="club" onClick={() => navigate('/post/new')}>
+              发布新帖
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map(post => (
+            <PostCard key={post.id} post={post} onClick={() => navigate(`/post/${post.id}`)} />
+          ))}
+
+          {hasNextPage && (
+            <div className="py-4 text-center">
+              <Button
+                variant="ghost"
+                disabled={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
+              >
+                {isFetchingNextPage ? '加载中...' : '加载更多'}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
+
+export default PostsPage
