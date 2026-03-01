@@ -1,12 +1,11 @@
 import { supabase } from '@/config/supabase'
-import { SessionUser } from '@/types'
 
-export const signUp = async (email: string, password: string, username: string) => {
+export const signUp = async (email: string, password: string, nickname: string) => {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: { username },
+      data: { nickname },
       emailRedirectTo: window.location.origin,
     },
   })
@@ -25,42 +24,9 @@ export const signOut = async () => {
   if (error) throw error
 }
 
-export const getCurrentUser = async (): Promise<SessionUser | null> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) return null
-
-  // 从 profiles 表获取用户资料
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session.user.id)
-    .single()
-
-  if (error || !profile) {
-    // 如果不存在，创建一个基本 profile
-    const newProfile = {
-      id: session.user.id,
-      username: session.user.user_metadata.username || null,
-      avatar: null,
-      grade: null,
-      bio: null,
-      graduate_university_id: null,
-      graduate_major_id: null,
-      graduate_year: null,
-      is_verified: false,
-      points: 0,
-      level: 1,
-      badges: [],
-      role: 'user',
-      privacy_settings: {},
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-    await supabase.from('profiles').insert(newProfile)
-    return { ...newProfile, email: session.user.email }
-  }
-
-  return { ...profile, email: session.user.email }
+export const getCurrentUser = async () => {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
 }
 
 export const resetPassword = async (email: string) => {
