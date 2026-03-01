@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { logout } from '@/services/authService'
-import toast from 'react-hot-toast'  // 改用 react-hot-toast
+import { signOut as logout } from '@/services/authService'  // 关键修改
+import toast from 'react-hot-toast'
 import Button from '@/components/common/Button'
 import {
   MagnifyingGlassIcon,
