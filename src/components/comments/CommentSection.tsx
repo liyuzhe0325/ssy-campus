@@ -2,118 +2,129 @@ import React, { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Button from '@/components/common/Button'
 import Input from '@/components/common/Input'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/config/supabase'
-import { Comment, Profile } from '@/types'
 import { formatDistanceToNow } from 'date-fns'
 import { zhCN } from 'date-fns/locale'
-import toast from 'react-hot-toast'
 
-interface Props {
-  targetType: string
-  targetId: string
+interface Comment {
+  id: string
+  user_id: string
+  content: string
+  parent_id: string | null
+  created_at: string
+  user?: {
+    id: string
+    username: string
+    avatar: string | null
+  }
+  replies?: Comment[]
 }
 
-// 获取评论
-const fetchComments = async (targetType: string, targetId: string) => {
-  const { data, error } = await supabase
-    .from('comments')
-    .select(`
-      *,
-      author:profiles(*)
-    `)
-    .eq('target_type', targetType)
-    .eq('target_id', targetId)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  return data as (Comment & { author: Profile })[]
+interface CommentSectionProps {
+  comments: Comment[]
+  onAddComment: (data: { content: string; parentId?: string | null }) => void
+  onDeleteComment?: (commentId: string) => void
+  isAdding?: boolean
 }
 
-// 发布评论
-const postComment = async (userId: string, targetType: string, targetId: string, content: string) => {
-  const { data, error } = await supabase
-    .from('comments')
-    .insert({
-      author_id: userId,
-      target_type: targetType,
-      target_id: targetId,
-      content,
-      status: 'approved', // 直接通过，不审核
-    })
-    .select()
-    .single()
-  if (error) throw error
-  return data
-}
-
-const CommentSection: React.FC<Props> = ({ targetType, targetId }) => {
+const CommentSection: React.FC<CommentSectionProps> = ({
+  comments,
+  onAddComment,
+  onDeleteComment,
+  isAdding = false,
+}) => {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
-  const [newComment, setNewComment] = useState('')
-
-  const { data: comments, isLoading } = useQuery({
-    queryKey: ['comments', targetType, targetId],
-    queryFn: () => fetchComments(targetType, targetId),
-  })
-
-  const mutation = useMutation({
-    mutationFn: (content: string) => postComment(user!.id, targetType, targetId, content),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['comments', targetType, targetId] })
-      setNewComment('')
-      toast.success('评论成功')
-    },
-    onError: (error: any) => {
-      toast.error('评论失败：' + error.message)
-    },
-  })
+  const [replyTo, setReplyTo] = useState<{ id: string; username: string } | null>(null)
+  const [commentContent, setCommentContent] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) {
-      toast.error('请先登录')
-      return
-    }
-    if (!newComment.trim()) return
-    mutation.mutate(newComment)
+    if (!commentContent.trim()) return
+    onAddComment({
+      content: commentContent,
+      parentId: replyTo?.id,
+    })
+    setCommentContent('')
+    setReplyTo(null)
   }
 
-  return (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">评论 ({comments?.length || 0})</h3>
-      {user ? (
-        <form onSubmit={handleSubmit} className="flex space-x-2">
-          <Input
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="写下你的评论..."
-            className="flex-1"
-          />
-          <Button type="submit" size="sm" isLoading={mutation.isPending}>
-            发布
-          </Button>
-        </form>
-      ) : (
-        <p className="text-sm text-gray-500">请<a href="/login" className="text-primary-600">登录</a>后评论</p>
-      )}
-      <div className="space-y-3 mt-4">
-        {isLoading && <div>加载评论...</div>}
-        {comments?.map((comment) => (
-          <div key={comment.id} className="border-b border-gray-100 pb-3">
-            <div className="flex items-center space-x-2 mb-1">
-              <span className="font-medium">{comment.author?.username || '匿名'}</span>
-              <span className="text-xs text-gray-400">
-                {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true, locale: zhCN })}
-              </span>
-            </div>
-            <p className="text-gray-700">{comment.content}</p>
+  const formatTime = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: zhCN })
+    } catch {
+      return dateStr
+    }
+  }
+
+  const renderComment = (comment: Comment, isReply = false) => (
+    <div key={comment.id} className={`${isReply ? 'ml-8 mt-3' : 'mt-4'} p-4 bg-dark-700/30 rounded-lg`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-full bg-primary-500/20 flex items-center justify-center text-xs text-primary-500">
+            {comment.user?.username?.[0] || '匿'}
           </div>
-        ))}
-        {comments?.length === 0 && (
-          <p className="text-gray-400 text-center py-4">还没有评论，来说两句吧~</p>
+          <span className="text-sm font-medium text-text-primary">{comment.user?.username || '匿名'}</span>
+          <span className="text-xs text-text-secondary">{formatTime(comment.created_at)}</span>
+        </div>
+        {user?.id === comment.user_id && onDeleteComment && (
+          <button
+            onClick={() => onDeleteComment(comment.id)}
+            className="text-xs text-danger hover:text-danger/80"
+          >
+            删除
+          </button>
         )}
       </div>
+      <p className="text-sm text-text-primary mt-2">{comment.content}</p>
+      {!isReply && (
+        <button
+          onClick={() => setReplyTo({ id: comment.id, username: comment.user?.username || '匿名' })}
+          className="text-xs text-primary-500 hover:text-primary-400 mt-2"
+        >
+          回复
+        </button>
+      )}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {comment.replies.map((reply) => renderComment(reply, true))}
+        </div>
+      )}
+    </div>
+  )
+
+  return (
+    <div className="global-card">
+      <h3 className="text-lg font-bold text-text-primary mb-4">评论区</h3>
+
+      {comments.length === 0 ? (
+        <p className="text-text-secondary text-sm py-4">暂无评论，快来抢沙发吧～</p>
+      ) : (
+        <div className="space-y-2">
+          {comments.map((comment) => renderComment(comment))}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="mt-6">
+        {replyTo && (
+          <div className="mb-2 flex items-center gap-2 text-sm text-text-secondary">
+            <span>回复 @{replyTo.username}</span>
+            <button type="button" onClick={() => setReplyTo(null)} className="text-danger hover:text-danger/80">
+              取消
+            </button>
+          </div>
+        )}
+        <div className="flex gap-2">
+          <Input
+            value={commentContent}
+            onChange={(e) => setCommentContent(e.target.value)}
+            placeholder={replyTo ? `回复 @${replyTo.username}...` : '写下你的评论...'}
+            className="flex-1"
+            disabled={isAdding}
+          />
+          <Button type="submit" variant="primary" disabled={isAdding || !commentContent.trim()}>
+            {isAdding ? '发送中...' : '发表'}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }
