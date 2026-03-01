@@ -1,74 +1,72 @@
 import React from 'react'
-import { twMerge } from 'tailwind-merge'
+import Loading from './Loading'
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost'
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 
+    | 'primary' 
+    | 'secondary' 
+    | 'outline' 
+    | 'ghost' 
+    | 'danger'
+    | 'learning'   // 青蓝主题（学习类）
+    | 'interest'   // 活力橙主题（兴趣类）
+    | 'private'    // 神秘紫主题（树洞）
+    | 'official'   // 权威金主题（新闻）
   size?: 'sm' | 'md' | 'lg'
-  isLoading?: boolean
+  loading?: boolean
+  icon?: React.ReactNode
+  iconPosition?: 'left' | 'right'
   fullWidth?: boolean
-  children: React.ReactNode
 }
 
 const Button: React.FC<ButtonProps> = ({
   variant = 'primary',
   size = 'md',
-  isLoading = false,
+  loading = false,
+  icon,
+  iconPosition = 'left',
   fullWidth = false,
   children,
-  className,
+  className = '',
   disabled,
   ...props
 }) => {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const baseClasses = 'global-btn'
 
   const variantClasses = {
-    primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500',
-    secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-gray-500',
-    outline: 'border border-gray-300 bg-transparent hover:bg-gray-50 focus:ring-primary-500',
-    ghost: 'bg-transparent hover:bg-gray-100 focus:ring-gray-500',
+    primary: 'global-btn-primary',
+    secondary: 'global-btn-secondary',
+    outline: 'global-btn-outline',
+    ghost: 'global-btn-ghost',
+    danger: 'global-btn-danger',
+    learning: 'bg-learning-500 hover:bg-learning-600 text-white focus:ring-learning-500 shadow-lg shadow-learning-500/20',
+    interest: 'bg-interest-500 hover:bg-interest-600 text-white focus:ring-interest-500 shadow-lg shadow-interest-500/20',
+    private: 'bg-private-500 hover:bg-private-600 text-white focus:ring-private-500 shadow-lg shadow-private-500/20',
+    official: 'bg-official-500 hover:bg-official-600 text-white focus:ring-official-500 shadow-lg shadow-official-500/20',
   }
 
   const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'px-3 py-1.5 text-sm rounded-button gap-1.5',
+    md: 'px-4 py-2 rounded-button gap-2',
+    lg: 'px-6 py-3 text-lg rounded-button gap-2.5',
   }
 
   return (
     <button
-      className={twMerge(
-        baseClasses,
-        variantClasses[variant],
-        sizeClasses[size],
-        fullWidth ? 'w-full' : '',
-        className
-      )}
-      disabled={disabled || isLoading}
+      className={`
+        ${baseClasses}
+        ${variantClasses[variant]}
+        ${sizeClasses[size]}
+        ${fullWidth ? 'w-full' : ''}
+        ${className}
+      `}
+      disabled={disabled || loading}
       {...props}
     >
-      {isLoading && (
-        <svg
-          className="animate-spin -ml-1 mr-2 h-4 w-4"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          />
-        </svg>
-      )}
+      {loading && <Loading size="sm" className="mr-2" />}
+      {icon && iconPosition === 'left' && <span className="inline-flex">{icon}</span>}
       {children}
+      {icon && iconPosition === 'right' && <span className="inline-flex">{icon}</span>}
     </button>
   )
 }
