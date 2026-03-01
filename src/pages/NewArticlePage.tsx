@@ -1,90 +1,127 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useCreateArticle } from '@/hooks/useArticles'
+import { useAuth } from '@/hooks/useAuth'
+import { createArticle } from '@/services/articleService'
 import Button from '@/components/common/Button'
-import Input from '@/components/common/Input'
+import Loading from '@/components/common/Loading'
 
-const categories = ['学习', '心态', '社团', '选科', '志愿', '大学', '其他'] as const
-
-const NewArticlePage: React.FC = () => {
+const NewArticlePage = () => {
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const createArticle = useCreateArticle()
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [summary, setSummary] = useState('')
-  const [category, setCategory] = useState<typeof categories[number]>('学习')
   const [tags, setTags] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
+  // 发布提交（真实可用）
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!title.trim() || !content.trim()) return
+    if (!user) return navigate('/login')
+    if (!title.trim() || !content.trim()) {
+      setError('标题和内容不能为空')
+      return
+    }
 
-    const tagArray = tags
-      .split(',')
-      .map(t => t.trim())
-      .filter(t => t)
+    setLoading(true)
+    setError('')
 
-    await createArticle.mutateAsync({
-      title,
-      content,
-      summary,
-      category,
-      tags: tagArray,
+    const res = await createArticle({
+      title: title.trim(),
+      content: content.trim(),
+      summary: summary.trim() || content.substring(0, 100),
+      author_id: user.id,
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean)
     })
-    navigate('/articles')
+
+    setLoading(false)
+
+    if (res) {
+      navigate('/articles') // 发布成功 → 跳文章列表
+    } else {
+      setError('发布失败，请稍后重试')
+    }
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">发布文章</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="标题"
-          required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">分类</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value as typeof categories[number])}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-          >
-            {categories.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+    <div className="max-w-3xl mx-auto py-2">
+      <h1 className="text-2xl font-bold text-white mb-6">发布经验文章</h1>
+
+      {error && (
+        <div className="bg-red-900/20 border border-red-800 text-red-300 px-4 py-3 rounded-lg mb-4">
+          {error}
         </div>
-        <Input
-          label="摘要（可选）"
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          placeholder="文章简短介绍"
-        />
-        <Input
-          label="标签（用英文逗号分隔）"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="例如：高考, 学习方法"
-        />
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">内容</label>
-          <textarea
-            required
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={10}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+          <label className="block text-gray-300 mb-2 text-sm font-medium">标题</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full bg-[#1A1F29] border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
+            placeholder="请输入文章标题"
+            disabled={loading}
           />
         </div>
-        <div className="flex space-x-3">
-          <Button type="submit" isLoading={createArticle.isPending}>
-            发布
+
+        <div>
+          <label className="block text-gray-300 mb-2 text-sm font-medium">简介（可选）</label>
+          <input
+            type="text"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            className="w-full bg-[#1A1F29] border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
+            placeholder="简短介绍，不超过100字"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-300 mb-2 text-sm font-medium">标签（用英文逗号分隔）</label>
+          <input
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            className="w-full bg-[#1A1F29] border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500"
+            placeholder="如：备考,学习方法,高三"
+            disabled={loading}
+          />
+        </div>
+
+        <div>
+          <label className="block text-gray-300 mb-2 text-sm font-medium">正文内容</label>
+          <textarea
+            rows={12}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full bg-[#1A1F29] border border-gray-700 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 resize-none"
+            placeholder="写下你的学习、校内、备考、志愿经验..."
+            disabled={loading}
+          />
+        </div>
+
+        <div className="flex gap-3 pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="flex-1"
+            onClick={() => navigate(-1)}
+            disabled={loading}
+          >
+            返回
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/articles')}>
-            取消
+
+          <Button
+            type="submit"
+            variant="primary"
+            className="flex-1 bg-blue-600 hover:bg-blue-500"
+            disabled={loading}
+          >
+            {loading ? <Loading className="w-4 h-4 text-white" /> : '发布文章'}
           </Button>
         </div>
       </form>
