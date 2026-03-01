@@ -121,3 +121,12 @@ export const useArticles = (params: ArticleListParams) => {
     deleteError: deleteArticleMutation.error,
   }
 }
+// 获取推荐文章
+export const useRelatedArticles = (articleId: string, tagIds: string[], limit = 3) => {
+  return useQuery({
+    queryKey: ['relatedArticles', articleId, tagIds],
+    queryFn: () => getRelatedArticles(articleId, tagIds, limit),
+    enabled: !!articleId && !!tagIds && tagIds.length > 0,
+    staleTime: 10 * 60 * 1000, // 10分钟缓存
+  })
+}
