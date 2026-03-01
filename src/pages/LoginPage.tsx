@@ -1,147 +1,134 @@
-import { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { signIn, signUp } from '@/services/authService'
+import toast from 'react-hot-toast'
 import Button from '@/components/common/Button'
 import Input from '@/components/common/Input'
-import toast from 'react-hot-toast'
 
-const LoginPage = () => {
-  const [isLogin, setIsLogin] = useState(true)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [username, setUsername] = useState('')
-  const [rememberMe, setRememberMe] = useState(false)
-  const { login, register, isLoading, user } = useAuth()
+const LoginPage: React.FC = () => {
+  const [isLoginMode, setIsLoginMode] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: '',
+    nickname: '',
+  })
+
   const navigate = useNavigate()
+  const { user } = useAuth()
 
-  // 监听 user 状态变化，登录成功后跳转
-  useEffect(() => {
+  // 已登录用户自动跳转首页
+  React.useEffect(() => {
     if (user) {
       navigate('/', { replace: true })
     }
   }, [user, navigate])
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    // 简单表单验证
-    if (!email.trim()) {
-      toast.error('请输入邮箱')
-      return
-    }
-    if (!password.trim()) {
-      toast.error('请输入密码')
-      return
-    }
-    if (!isLogin && !username.trim()) {
-      toast.error('请输入用户名')
-      return
-    }
+    setLoading(true)
 
     try {
-      if (isLogin) {
-        await login(email, password)
+      if (isLoginMode) {
+        await signIn(formData.email, formData.password)
         toast.success('登录成功！')
+        navigate('/', { replace: true })
       } else {
-        await register(email, password, username)
-        toast.success('注册成功！请检查邮箱验证。')
-        setIsLogin(true)
-        setPassword('')
-        setUsername('')
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('两次输入的密码不一致')
+        }
+        if (formData.nickname.trim().length < 2) {
+          throw new Error('昵称至少需要2个字符')
+        }
+        await signUp(formData.email, formData.password, formData.nickname.trim())
+        toast.success('注册成功！已自动登录')
+        navigate('/', { replace: true })
       }
     } catch (error: any) {
-      // 错误已经通过 toast 显示，这里不需要额外操作
-      console.error('登录/注册失败:', error.message)
+      toast.error(error.message || '操作失败，请重试')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isLogin ? '登录账号' : '注册新账号'}
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {isLogin ? '欢迎回来' : '加入校园经验传承社区'}
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-dark-800 rounded-2xl shadow-soft p-8 border border-dark-700">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-text-primary mb-2">
+            {isLoginMode ? '欢迎回来' : '注册账号'}
+          </h1>
+          <p className="text-text-secondary">
+            {isLoginMode ? '登录你的账号，开启经验传承之旅' : '加入我们，分享你的校园经验'}
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            label="邮箱"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            placeholder="请输入你的邮箱"
+            required
+          />
+
+          {!isLoginMode && (
             <Input
-              label="电子邮箱"
-              type="email"
+              label="昵称"
+              name="nickname"
+              type="text"
+              value={formData.nickname}
+              onChange={handleInputChange}
+              placeholder="请输入你的昵称"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
             />
-            {!isLogin && (
-              <Input
-                label="用户名"
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="如何称呼你"
-              />
-            )}
+          )}
+
+          <Input
+            label="密码"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange}
+            placeholder="请输入密码"
+            required
+          />
+
+          {!isLoginMode && (
             <Input
-              label="密码"
+              label="确认密码"
+              name="confirmPassword"
               type="password"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              placeholder="请再次输入密码"
               required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder={isLogin ? '输入密码' : '至少6位'}
             />
-            {isLogin && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                    记住我
-                  </label>
-                </div>
-                <div className="text-sm">
-                  <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
-                    忘记密码？
-                  </a>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
 
-          <div>
-            <Button
-              type="submit"
-              variant="primary"
-              className="w-full"
-              isLoading={isLoading}
-            >
-              {isLogin ? '登录' : '注册'}
-            </Button>
-          </div>
-
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin)
-                setPassword('')
-              }}
-              className="text-primary-600 hover:text-primary-500 text-sm"
-            >
-              {isLogin ? '没有账号？立即注册' : '已有账号？返回登录'}
-            </button>
-          </div>
+          <Button type="submit" loading={loading} fullWidth size="lg" className="mt-2">
+            {isLoginMode ? '登录' : '注册'}
+          </Button>
         </form>
+
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={() => setIsLoginMode(!isLoginMode)}
+            className="text-primary-500 hover:text-primary-400 text-sm transition-colors"
+          >
+            {isLoginMode ? '还没有账号？点击注册' : '已有账号？点击登录'}
+          </button>
+        </div>
       </div>
     </div>
   )
