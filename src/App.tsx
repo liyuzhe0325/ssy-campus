@@ -5,7 +5,10 @@ import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import ProfilePage from './pages/ProfilePage'
 import MessagesPage from './pages/MessagesPage'
-// 阶段二路由后续直接在此处添加，无需修改结构
+import ArticlesPage from './pages/ArticlesPage'
+import ArticleDetailPage from './pages/ArticleDetailPage'
+import NewArticlePage from './pages/NewArticlePage' // 发布页
+import CareerPlanPage from './pages/CareerPlanPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuthStore()
@@ -16,18 +19,18 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <Routes>
-      {/* 无布局页面（不显示Header、TabBar） */}
       <Route path="/login" element={<LoginPage />} />
-      
-      {/* 带布局的受保护页面 */}
+
       <Route element={<Layout />}>
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-        <Route path="/profile/:id" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-        <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
-        {/* 阶段二路由后续直接在此处添加，示例：
+        
         <Route path="/articles" element={<ProtectedRoute><ArticlesPage /></ProtectedRoute>} />
         <Route path="/article/:id" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
-        */}
+        <Route path="/article/new" element={<ProtectedRoute><NewArticlePage /></ProtectedRoute>} /> {/* 发布 */}
+        
+        <Route path="/career-plan" element={<ProtectedRoute><CareerPlanPage /></ProtectedRoute>} />
+        <Route path="/profile/:id?" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
       </Route>
     </Routes>
   )
