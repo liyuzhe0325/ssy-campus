@@ -2,7 +2,7 @@
 // 应用根组件：路由总入口（全模块集成版，文章模块适配命名习惯）
 // 功能：配置全局路由，登录守卫，布局嵌套
 // 已集成：文章（列表 ArticlePage）、问答、动态、贴吧、树洞、新闻、标签、搜索、学业规划、用户系统
-// ============================
+// ============================-
 
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
