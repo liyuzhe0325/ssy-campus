@@ -1,8 +1,3 @@
-/* ============================
-   省实验经验传承平台 · 全局设计令牌
-   包含：颜色、圆角、阴影、动画、模块主题色、全局组件类
-   ============================ */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -16,8 +11,8 @@
 
   html, body {
     height: 100%;
-    background-color: #0b0f17; /* dark-950 */
-    color: #e5e7eb; /* gray-200 */
+    background-color: #0b0f17;
+    color: #e5e7eb;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -34,15 +29,15 @@
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #1f2937; /* dark-800 */
+    background: #1f2937;
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb {
-    background: #4b5563; /* dark-600 */
+    background: #4b5563;
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #0ea5e9; /* primary-500 */
+    background: #0ea5e9;
   }
 }
 
@@ -62,7 +57,7 @@
            transition-all duration-200;
   }
 
-  /* ========== 全局按钮 ========== */
+  /* ========== 全局按钮（已由 Button 组件处理，这里保留类供直接使用）========== */
   .global-btn {
     @apply inline-flex items-center justify-center font-medium rounded-button px-4 py-2 
            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-dark-950
@@ -72,7 +67,7 @@
     @apply global-btn bg-primary-500 hover:bg-primary-600 text-white focus:ring-primary-500 shadow-lg shadow-primary-500/20;
   }
   .global-btn-secondary {
-    @apply global-btn bg-secondary-500 hover:bg-secondary-600 text-white focus:ring-secondary-500;
+    @apply global-btn bg-success-500 hover:bg-success-600 text-white focus:ring-success-500 shadow-lg shadow-success-500/20;
   }
   .global-btn-outline {
     @apply global-btn border border-dark-600 hover:border-primary-500 text-gray-300 hover:text-white focus:ring-primary-500;
@@ -83,27 +78,25 @@
   .global-btn-danger {
     @apply global-btn bg-danger hover:bg-red-600 text-white focus:ring-red-500;
   }
+  .global-btn-learning {
+    @apply global-btn bg-learning-500 hover:bg-learning-600 text-white focus:ring-learning-500 shadow-lg shadow-learning-500/20;
+  }
+  .global-btn-interest {
+    @apply global-btn bg-interest-500 hover:bg-interest-600 text-white focus:ring-interest-500 shadow-lg shadow-interest-500/20;
+  }
+  .global-btn-private {
+    @apply global-btn bg-private-500 hover:bg-private-600 text-white focus:ring-private-500 shadow-lg shadow-private-500/20;
+  }
+  .global-btn-official {
+    @apply global-btn bg-official-500 hover:bg-official-600 text-white focus:ring-official-500 shadow-lg shadow-official-500/20;
+  }
 
-  /* ========== 全局容器（响应式居中） ========== */
+  /* ========== 全局容器（响应式居中）========== */
   .global-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
   }
 
-  /* ========== 模块主题色工具类 ========== */
-  .theme-learning {
-    @apply border-l-4 border-learning-500;
-  }
-  .theme-interest {
-    @apply border-l-4 border-interest-500;
-  }
-  .theme-private {
-    @apply border-l-4 border-private-500;
-  }
-  .theme-official {
-    @apply border-l-4 border-official-500;
-  }
-
-  /* ========== 玻璃态效果 ========== */
+  /* ========== 玻璃态 ========== */
   .glass {
     background: rgba(31, 41, 55, 0.7);
     backdrop-filter: blur(10px);
@@ -118,46 +111,73 @@
     background-clip: text;
   }
 
-  /* ========== 淡入动画 ========== */
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+  /* ========== 模块主题色边框 ========== */
+  .border-theme-learning {
+    border-left: 4px solid #0ea5e9;
   }
-  .fade-in {
-    animation: fadeIn 0.3s ease-out forwards;
+  .border-theme-interest {
+    border-left: 4px solid #f97316;
+  }
+  .border-theme-private {
+    border-left: 4px solid #a855f7;
+  }
+  .border-theme-official {
+    border-left: 4px solid #eab308;
   }
 }
 
 @layer utilities {
-  /* 模块主题色（扩展Tailwind颜色） */
-  :root {
-    --color-learning: 14 165 233;   /* #0ea5e9 */
-    --color-interest: 249 115 22;   /* #f97316 */
-    --color-private: 168 85 247;    /* #a855f7 */
-    --color-official: 234 179 8;    /* #eab308 */
-    --color-success: 16 185 129;    /* #10b981 */
-    --color-danger: 239 68 68;      /* #ef4444 */
+  /* 文本颜色 */
+  .text-text-primary {
+    @apply text-white;
+  }
+  .text-text-secondary {
+    @apply text-gray-400;
   }
 
-  .bg-learning-500 { background-color: rgb(var(--color-learning)); }
-  .border-learning-500 { border-color: rgb(var(--color-learning)); }
-  .text-learning-500 { color: rgb(var(--color-learning)); }
+  /* 动画 */
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+  }
 
-  .bg-interest-500 { background-color: rgb(var(--color-interest)); }
-  .border-interest-500 { border-color: rgb(var(--color-interest)); }
-  .text-interest-500 { color: rgb(var(--color-interest)); }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
 
-  .bg-private-500 { background-color: rgb(var(--color-private)); }
-  .border-private-500 { border-color: rgb(var(--color-private)); }
-  .text-private-500 { color: rgb(var(--color-private)); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .animate-pulse-slow {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
 
-  .bg-official-500 { background-color: rgb(var(--color-official)); }
-  .border-official-500 { border-color: rgb(var(--color-official)); }
-  .text-official-500 { color: rgb(var(--color-official)); }
-
-  .bg-success-500 { background-color: rgb(var(--color-success)); }
-  .text-success-500 { color: rgb(var(--color-success)); }
-
-  .bg-danger-500 { background-color: rgb(var(--color-danger)); }
-  .text-danger-500 { color: rgb(var(--color-danger)); }
+  /* 常用工具类 */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
