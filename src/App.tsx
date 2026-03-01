@@ -1,7 +1,7 @@
 // ============================
-// 应用根组件：路由总入口（全模块集成版）
+// 应用根组件：路由总入口（全模块集成版，文章模块适配命名习惯）
 // 功能：配置全局路由，登录守卫，布局嵌套
-// 已集成：文章、问答、动态、贴吧、树洞、新闻、标签、搜索、学业规划、用户系统
+// 已集成：文章（列表 ArticlePage）、问答、动态、贴吧、树洞、新闻、标签、搜索、学业规划、用户系统
 // ============================
 
 import { Routes, Route, Navigate } from 'react-router-dom'
@@ -16,8 +16,8 @@ import HomePage from './pages/HomePage'
 import ProfilePage from './pages/ProfilePage'
 import MessagesPage from './pages/MessagesPage'
 
-// 文章模块
-import ArticlesPage from './pages/ArticlesPage'
+// 文章模块（按你的命名习惯：列表 ArticlePage，详情 ArticleDetailPage，发布 NewArticlePage）
+import ArticlePage from './pages/ArticlePage'
 import ArticleDetailPage from './pages/ArticleDetailPage'
 import NewArticlePage from './pages/NewArticlePage'
 
@@ -70,8 +70,8 @@ function App() {
         {/* 首页 */}
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
 
-        {/* 文章模块 */}
-        <Route path="/articles" element={<ProtectedRoute><ArticlesPage /></ProtectedRoute>} />
+        {/* 文章模块（列表 ArticlePage） */}
+        <Route path="/articles" element={<ProtectedRoute><ArticlePage /></ProtectedRoute>} />
         <Route path="/article/:id" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
         <Route path="/article/new" element={<ProtectedRoute><NewArticlePage /></ProtectedRoute>} />
 
