@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { logout } from '@/services/authService'
-import { useToast } from '@/components/common/Toast'
+import toast from 'react-hot-toast'  // 改用 react-hot-toast
 import Button from '@/components/common/Button'
 import {
   MagnifyingGlassIcon,
@@ -20,16 +20,15 @@ import {
 const Header: React.FC = () => {
   const { user, profile } = useAuth()
   const navigate = useNavigate()
-  const { showToast } = useToast()
   const [showUserMenu, setShowUserMenu] = useState(false)
 
   const handleLogout = async () => {
     try {
       await logout()
-      showToast('退出登录成功', 'success')
+      toast.success('退出登录成功')
       navigate('/login')
     } catch (error: any) {
-      showToast(error.message || '退出登录失败', 'error')
+      toast.error(error.message || '退出登录失败')
     }
   }
 
@@ -56,7 +55,7 @@ const Header: React.FC = () => {
 
           {/* 右侧操作区 */}
           <div className="flex items-center gap-3">
-            {/* 快捷导航图标（平板端可收起） */}
+            {/* 快捷导航图标 */}
             <div className="hidden md:flex items-center gap-1">
               <Link to="/">
                 <Button variant="ghost" size="sm" icon={<HomeIcon className="w-5 h-5" />} />
