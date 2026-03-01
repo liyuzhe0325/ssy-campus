@@ -1,88 +1,22 @@
-import { Outlet, Link } from 'react-router-dom'
-import { useState } from 'react'
-import { useAuthStore } from '@/store/authStore'
-import {
-  BellIcon, UserIcon, HomeIcon, DocumentTextIcon,
-  QuestionMarkCircleIcon, AcademicCapIcon, ChartBarIcon,
-  ChatBubbleLeftIcon, CogIcon, ChevronDownIcon
-} from '@heroicons/react/24/outline'
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import Header from './Header';
 
-const Layout = () => {
-  const { user } = useAuthStore()
-  const [profileExpand, setProfileExpand] = useState(false)
-
-  const navItems = [
-    { icon: <HomeIcon className="w-5 h-5" />, label: '首页', path: '/' },
-    { icon: <DocumentTextIcon className="w-5 h-5" />, label: '经验资料', path: '/articles' },
-    { icon: <QuestionMarkCircleIcon className="w-5 h-5" />, label: '校园互助', path: '/questions' },
-    { icon: <AcademicCapIcon className="w-5 h-5" />, label: '专业院校', path: '/universities' },
-    { icon: <ChartBarIcon className="w-5 h-5" />, label: '升学数据', path: '/score' },
-    { icon: <ChatBubbleLeftIcon className="w-5 h-5" />, label: '校园动态', path: '/dynamics' },
-  ]
-
+export default function Layout() {
   return (
-    <div className="min-h-screen bg-[#0F1217] text-gray-200 flex overflow-hidden">
-      <aside className="w-[220px] h-screen fixed left-0 top-0 bg-[#1A1F29] border-r border-gray-800 flex flex-col z-50">
-        <div className="h-16 flex items-center px-6 border-b border-gray-800">
-          <h1 className="text-lg font-bold text-white flex items-center gap-2">
-            <span className="text-blue-400">🎓</span>
-            省实验传承平台
-          </h1>
-        </div>
-
-        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-          {navItems.map((item, index) => (
-            <Link
-              key={index}
-              to={item.path}
-              className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-[#252B3A] hover:text-white transition-all duration-200"
-            >
-              {item.icon}
-              <span className="text-sm font-medium">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="border-t border-gray-800 p-3">
-          <button
-            onClick={() => setProfileExpand(!profileExpand)}
-            className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-gray-400 hover:bg-[#252B3A] hover:text-white transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <UserIcon className="w-5 h-5" />
-              <span className="text-sm font-medium">个人中心</span>
-            </div>
-            <ChevronDownIcon className={`w-4 h-4 transition-transform ${profileExpand ? 'rotate-180' : ''}`} />
-          </button>
-
-          {profileExpand && (
-            <div className="mt-1 ml-8 space-y-1 flex flex-col">
-              <Link to="/profile" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">个人资料</Link>
-              <Link to="/digital-twin" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">数字孪生体</Link>
-              <Link to="/career-plan" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">成长规划</Link>
-              <Link to="/settings" className="px-4 py-2 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-[#252B3A]">系统设置</Link>
-            </div>
-          )}
-        </div>
-      </aside>
-
-      <div className="flex-1 ml-[220px] flex flex-col">
-        <header className="h-16 fixed left-[220px] right-0 top-0 bg-[#1A1F29]/80 backdrop-blur-md border-b border-gray-800 z-40 flex items-center justify-between px-8">
-          <div className="text-sm text-gray-400">在校生·毕业生共同成长社区</div>
-          <div className="flex items-center gap-4">
-            <BellIcon className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer" />
-            <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 font-medium">
-              {user?.username?.charAt(0) || '学'}
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1 mt-16 p-8 max-w-[1200px] mx-auto w-full">
+    <div className="min-h-screen flex flex-col md:flex-row bg-bg-base">
+      {/* 左侧固定侧边栏 */}
+      <Sidebar />
+      
+      {/* 右侧主内容区 */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* 顶部固定导航栏 */}
+        <Header />
+        {/* 页面内容区 */}
+        <main className="flex-1 w-full fade-in">
           <Outlet />
         </main>
       </div>
     </div>
-  )
+  );
 }
-
-export default Layout
