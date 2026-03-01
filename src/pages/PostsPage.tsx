@@ -1,29 +1,29 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosts } from '@/hooks/usePosts'
 import { useAuth } from '@/hooks/useAuth'
 import PostCard from '@/components/posts/PostCard'
 import Button from '@/components/common/Button'
 import Loading from '@/components/common/Loading'
-import toast from 'react-hot-toast'
 
 const PostsPage = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [page, setPage] = useState(1)
   const pageSize = 10
 
-  const { usePostsList, isLoading, error } = usePosts({ page, pageSize })
-  const { data: posts, fetchNextPage, hasNextPage } = usePostsList()
+  const {
+    postsPages,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+    refetch
+  } = usePosts(pageSize)
 
-  const handleLoadMore = () => {
-    if (hasNextPage && !isLoading) {
-      fetchNextPage()
-      setPage(prev => prev + 1)
-    }
-  }
+  // 将所有页的数据展平
+  const posts = postsPages?.flatMap(page => page) ?? []
 
-  if (isLoading && page === 1) {
+  if (isLoading) {
     return (
       <div className="global-container py-10 flex justify-center">
         <Loading />
@@ -33,14 +33,10 @@ const PostsPage = () => {
 
   if (error) {
     return (
-      <div className="global-container py-10 text-center text-text-secondary">
+      <div className="global-container py-10 text-center text-gray-400">
         <p>加载失败，请重试</p>
-        <Button
-          className="mt-4"
-          variant="primary"
-          onClick={() => window.location.reload()}
-        >
-          刷新页面
+        <Button className="mt-4" variant="primary" onClick={() => refetch()}>
+          刷新
         </Button>
       </div>
     )
@@ -49,33 +45,26 @@ const PostsPage = () => {
   return (
     <div className="global-container max-w-3xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-text-primary">校园贴吧</h1>
+        <h1 className="text-2xl font-bold text-white">校园贴吧</h1>
         {user && (
-          <Button
-            variant="club"
-            onClick={() => navigate('/post/new')}
-          >
+          <Button variant="club" onClick={() => navigate('/post/new')}>
             发布新帖
           </Button>
         )}
       </div>
 
-      {posts?.length === 0 ? (
-        <div className="global-card text-center py-10 text-text-secondary">
+      {posts.length === 0 ? (
+        <div className="global-card text-center py-10 text-gray-400">
           <p>暂无帖子，快来发布第一条吧！</p>
           {user && (
-            <Button
-              className="mt-4"
-              variant="club"
-              onClick={() => navigate('/post/new')}
-            >
+            <Button className="mt-4" variant="club" onClick={() => navigate('/post/new')}>
               发布新帖
             </Button>
           )}
         </div>
       ) : (
         <div className="space-y-4">
-          {posts?.map(post => (
+          {posts.map(post => (
             <PostCard
               key={post.id}
               post={post}
@@ -87,10 +76,10 @@ const PostsPage = () => {
             <div className="py-4 text-center">
               <Button
                 variant="ghost"
-                disabled={isLoading}
-                onClick={handleLoadMore}
+                disabled={isFetchingNextPage}
+                onClick={() => fetchNextPage()}
               >
-                {isLoading ? '加载中...' : '加载更多'}
+                {isFetchingNextPage ? '加载中...' : '加载更多'}
               </Button>
             </div>
           )}
