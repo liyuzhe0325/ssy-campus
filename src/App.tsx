@@ -1,121 +1,118 @@
-import { Routes, Route, Navigate, lazy, Suspense } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import Loading from '@/components/common/Loading'
+// ============================
+// 应用根组件：路由总入口（全模块集成版）
+// 功能：配置全局路由，登录守卫，布局嵌套
+// 已集成：文章、问答、动态、贴吧、树洞、新闻、标签、搜索、学业规划、用户系统
+// ============================
 
-// 首屏直接引入的页面
-import HomePage from '@/pages/HomePage'
-import LoginPage from '@/pages/LoginPage'
-import NotFoundPage from '@/pages/NotFoundPage'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from './store/authStore'
+import Layout from './components/layout/Layout'
 
-// ========== 懒加载页面（根据你现有的文件调整） ==========
-const ArticlesPage = lazy(() => import('@/pages/ArticlesPage'))          // 文章列表
-// const ArticleDetailPage = lazy(() => import('@/pages/ArticleDetailPage')) // 文章详情（暂时没有）
-// const ArticlePublishPage = lazy(() => import('@/pages/ArticlePublishPage')) // 发布文章（暂时没有）
+// 公共页面
+import LoginPage from './pages/LoginPage'
 
-const QuestionsPage = lazy(() => import('@/pages/QuestionsPage'))        // 问答列表
-const QuestionDetailPage = lazy(() => import('@/pages/QuestionDetailPage')) // 问答详情
-const QuestionPublishPage = lazy(() => import('@/pages/QuestionPublishPage')) // 发起提问（如果存在？）
+// 用户系统页面
+import HomePage from './pages/HomePage'
+import ProfilePage from './pages/ProfilePage'
+import MessagesPage from './pages/MessagesPage'
 
-const DynamicsPage = lazy(() => import('@/pages/DynamicsPage'))          // 校园动态
+// 文章模块
+import ArticlesPage from './pages/ArticlesPage'
+import ArticleDetailPage from './pages/ArticleDetailPage'
+import NewArticlePage from './pages/NewArticlePage'
 
-const PostsPage = lazy(() => import('@/pages/PostsPage'))                // 贴吧列表
-const PostDetailPage = lazy(() => import('@/pages/PostDetailPage'))      // 帖子详情
-const PostPublishPage = lazy(() => import('@/pages/PostPublishPage'))    // 发布帖子
+// 问答模块
+import QuestionsPage from './pages/QuestionsPage'
+import QuestionDetailPage from './pages/QuestionDetailPage'
+import NewQuestionPage from './pages/NewQuestionPage'
 
-const TreeholePage = lazy(() => import('@/pages/TreeholePage'))          // 树洞列表
-const TreeholeDetailPage = lazy(() => import('@/pages/TreeholeDetailPage')) // 树洞详情
-const TreeholePublishPage = lazy(() => import('@/pages/TreeholePublishPage')) // 匿名发帖
+// 动态模块
+import DynamicsPage from './pages/DynamicsPage'
+import DynamicDetailPage from './pages/DynamicDetailPage'
+import NewDynamicPage from './pages/NewDynamicPage'
 
-const NewsPage = lazy(() => import('@/pages/NewsPage'))                  // 新闻列表
-const NewsDetailPage = lazy(() => import('@/pages/NewsDetailPage'))      // 新闻详情
+// 贴吧模块
+import PostsPage from './pages/PostsPage'
+import PostDetailPage from './pages/PostDetailPage'
+import NewPostPage from './pages/NewPostPage'
 
-const TagPage = lazy(() => import('@/pages/TagPage'))                    // 标签详情
-const SearchPage = lazy(() => import('@/pages/SearchPage'))              // 全局搜索
+// 树洞模块
+import TreeholePage from './pages/TreeholePage'
+import TreeholeDetailPage from './pages/TreeholeDetailPage'
+import NewTreeholePage from './pages/NewTreeholePage'
 
-const CareerPlanPage = lazy(() => import('@/pages/CareerPlanPage'))      // 学业规划
-const ProfilePage = lazy(() => import('@/pages/ProfilePage'))            // 个人主页
-const MessagesPage = lazy(() => import('@/pages/MessagesPage'))          // 私信
+// 新闻模块
+import NewsPage from './pages/NewsPage'
+import NewsDetailPage from './pages/NewsDetailPage'
 
-// ========== 登录守卫 ==========
+// 标签与搜索
+import TagPage from './pages/TagPage'
+import SearchPage from './pages/SearchPage'
+
+// 学业规划
+import CareerPlanPage from './pages/CareerPlanPage'
+
+// 路由守卫
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth()
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-dark flex items-center justify-center">
-        <Loading size="lg" />
-      </div>
-    )
-  }
-  if (!user) {
-    return <Navigate to="/login" replace />
-  }
+  const { user } = useAuthStore()
+  if (!user) return <Navigate to="/login" replace />
   return <>{children}</>
-}
-
-const LazyWrapper = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-dark flex items-center justify-center">
-        <Loading size="lg" />
-      </div>
-    }>
-      {children}
-    </Suspense>
-  )
 }
 
 function App() {
   return (
-    <div className="min-h-screen bg-dark text-white font-sans">
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
+    <Routes>
+      {/* 公共路由：登录页（无布局） */}
+      <Route path="/login" element={<LoginPage />} />
 
+      {/* 私有路由：全部带Layout */}
+      <Route element={<Layout />}>
         {/* 首页 */}
         <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
 
-        {/* 文章模块：只有列表页存在，详情和发布暂时注释 */}
-        <Route path="/articles" element={<ProtectedRoute><LazyWrapper><ArticlesPage /></LazyWrapper></ProtectedRoute>} />
-        {/* <Route path="/article/:id" element={<ProtectedRoute><LazyWrapper><ArticleDetailPage /></LazyWrapper></ProtectedRoute>} /> */}
-        {/* <Route path="/article/new" element={<ProtectedRoute><LazyWrapper><ArticlePublishPage /></LazyWrapper></ProtectedRoute>} /> */}
+        {/* 文章模块 */}
+        <Route path="/articles" element={<ProtectedRoute><ArticlesPage /></ProtectedRoute>} />
+        <Route path="/article/:id" element={<ProtectedRoute><ArticleDetailPage /></ProtectedRoute>} />
+        <Route path="/article/new" element={<ProtectedRoute><NewArticlePage /></ProtectedRoute>} />
 
-        {/* 问答模块：假设都存在 */}
-        <Route path="/questions" element={<ProtectedRoute><LazyWrapper><QuestionsPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/question/:id" element={<ProtectedRoute><LazyWrapper><QuestionDetailPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/question/new" element={<ProtectedRoute><LazyWrapper><QuestionPublishPage /></LazyWrapper></ProtectedRoute>} />
+        {/* 问答模块 */}
+        <Route path="/questions" element={<ProtectedRoute><QuestionsPage /></ProtectedRoute>} />
+        <Route path="/question/:id" element={<ProtectedRoute><QuestionDetailPage /></ProtectedRoute>} />
+        <Route path="/question/new" element={<ProtectedRoute><NewQuestionPage /></ProtectedRoute>} />
 
         {/* 动态模块 */}
-        <Route path="/dynamics" element={<ProtectedRoute><LazyWrapper><DynamicsPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/dynamics" element={<ProtectedRoute><DynamicsPage /></ProtectedRoute>} />
+        <Route path="/dynamic/:id" element={<ProtectedRoute><DynamicDetailPage /></ProtectedRoute>} />
+        <Route path="/dynamic/new" element={<ProtectedRoute><NewDynamicPage /></ProtectedRoute>} />
 
         {/* 贴吧模块 */}
-        <Route path="/posts" element={<ProtectedRoute><LazyWrapper><PostsPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/post/:id" element={<ProtectedRoute><LazyWrapper><PostDetailPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/post/new" element={<ProtectedRoute><LazyWrapper><PostPublishPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/posts" element={<ProtectedRoute><PostsPage /></ProtectedRoute>} />
+        <Route path="/post/:id" element={<ProtectedRoute><PostDetailPage /></ProtectedRoute>} />
+        <Route path="/post/new" element={<ProtectedRoute><NewPostPage /></ProtectedRoute>} />
 
         {/* 树洞模块 */}
-        <Route path="/treehole" element={<ProtectedRoute><LazyWrapper><TreeholePage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/treehole/:id" element={<ProtectedRoute><LazyWrapper><TreeholeDetailPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/treehole/new" element={<ProtectedRoute><LazyWrapper><TreeholePublishPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/treehole" element={<ProtectedRoute><TreeholePage /></ProtectedRoute>} />
+        <Route path="/treehole/:id" element={<ProtectedRoute><TreeholeDetailPage /></ProtectedRoute>} />
+        <Route path="/treehole/new" element={<ProtectedRoute><NewTreeholePage /></ProtectedRoute>} />
 
         {/* 新闻模块 */}
-        <Route path="/news" element={<ProtectedRoute><LazyWrapper><NewsPage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/news/:id" element={<ProtectedRoute><LazyWrapper><NewsDetailPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/news" element={<ProtectedRoute><NewsPage /></ProtectedRoute>} />
+        <Route path="/news/:id" element={<ProtectedRoute><NewsDetailPage /></ProtectedRoute>} />
 
         {/* 标签模块 */}
-        <Route path="/tag/:id" element={<ProtectedRoute><LazyWrapper><TagPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/tag/:id" element={<ProtectedRoute><TagPage /></ProtectedRoute>} />
 
         {/* 搜索模块 */}
-        <Route path="/search" element={<ProtectedRoute><LazyWrapper><SearchPage /></LazyWrapper></ProtectedRoute>} />
+        <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
 
-        {/* 学业规划 */}
-        <Route path="/career-plan" element={<ProtectedRoute><LazyWrapper><CareerPlanPage /></LazyWrapper></ProtectedRoute>} />
+        {/* 学业规划模块 */}
+        <Route path="/career-plan" element={<ProtectedRoute><CareerPlanPage /></ProtectedRoute>} />
 
         {/* 用户系统 */}
-        <Route path="/profile/:userId?" element={<ProtectedRoute><LazyWrapper><ProfilePage /></LazyWrapper></ProtectedRoute>} />
-        <Route path="/messages" element={<ProtectedRoute><LazyWrapper><MessagesPage /></LazyWrapper></ProtectedRoute>} />
-
-        <Route path="*" element={<NotFoundPage />} />
-      </Routes>
-    </div>
+        <Route path="/profile/:userId?" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
+      </Route>
+    </Routes>
   )
 }
 
