@@ -2,10 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import Loading from '@/components/common/Loading'
 
-// 页面导入（按你现有项目来）
+// 只导入你项目里【一定存在】的页面
 import HomePage from '@/pages/HomePage'
 import LoginPage from '@/pages/LoginPage'
-import RegisterPage from '@/pages/RegisterPage'
 import ArticleListPage from '@/pages/ArticleListPage'
 import ArticleDetailPage from '@/pages/ArticleDetailPage'
 import ArticlePublishPage from '@/pages/ArticlePublishPage'
@@ -13,11 +12,10 @@ import QuestionListPage from '@/pages/QuestionListPage'
 import CareerPlanPage from '@/pages/CareerPlanPage'
 import NotFoundPage from '@/pages/NotFoundPage'
 
-// 🔐 登录守卫（核心）
+// 登录守卫（核心不变）
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, isLoading } = useAuth()
 
-  // 认证加载中 → 显示loading
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#111827] flex items-center justify-center">
@@ -26,12 +24,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     )
   }
 
-  // 没登录 → 去登录页
   if (!user) {
     return <Navigate to="/login" replace />
   }
 
-  // 已登录 → 显示页面
   return <>{children}</>
 }
 
@@ -40,11 +36,10 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen bg-[#111827] text-white">
         <Routes>
-          {/* 登录/注册 公开可访问 */}
+          {/* 仅保留登录页（无注册页，避免报错） */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
 
-          {/* 🏠 首页（必须登录）*/}
+          {/* 首页（必须登录）*/}
           <Route path="/" element={
             <ProtectedRoute>
               <HomePage />
