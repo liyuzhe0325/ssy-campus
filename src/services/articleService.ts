@@ -157,3 +157,42 @@ export const deleteArticle = async (id: string): Promise<boolean> => {
 // 兼容旧代码的别名（可选，确保向后兼容）
 export const getArticleList = getArticles
 export const getArticleDetail = getArticleById
+// 获取推荐文章（基于标签相似度）
+export const getRelatedArticles = async (articleId: string, tagIds: string[], limit = 3) => {
+  try {
+    // 查询具有相同标签的其他已审核文章，排除当前文章
+    let query = supabase
+      .from('articles')
+      .select(`
+        *,
+        profiles:author_id (
+          id, username, avatar, grade
+        ),
+        tags:article_tags (
+          tag:tag_id (*)
+        )
+      `)
+      .eq('status', 'approved')
+      .neq('id', articleId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    // 如果有标签，优先匹配标签（使用contains过滤）
+    if (tagIds && tagIds.length > 0) {
+      // PostgreSQL中数组包含操作符 @>，这里用contains
+      query = query.contains('tag_ids', tagIds)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    // 格式化标签数据
+    return (data || []).map(article => ({
+      ...article,
+      tags: article.tags?.map((t: any) => t.tag) || []
+    }))
+  } catch (err) {
+    console.error('[文章服务] 获取推荐文章失败:', err)
+    return []
+  }
+}
