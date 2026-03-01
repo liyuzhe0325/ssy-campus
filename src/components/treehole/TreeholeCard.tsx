@@ -1,13 +1,7 @@
-// ============================
-// 树洞卡片（纯匿名、无头像、无用户名）
-// 样式完全统一全项目
-// ============================
-
 import React from 'react'
-import { TreeholePost } from '@/services/treeholeService'
 
 interface TreeholeCardProps {
-  post: TreeholePost
+  post: any
   onClick: () => void
 }
 
@@ -15,17 +9,20 @@ const TreeholeCard: React.FC<TreeholeCardProps> = ({ post, onClick }) => {
   return (
     <div
       onClick={onClick}
-      className="bg-[#1A1F29] rounded-xl p-4 border border-gray-800 hover:border-pink-500/30 hover:shadow-lg transition-all cursor-pointer"
+      className="global-card cursor-pointer hover:shadow-lg transition border-l-4 border-private-500"
     >
-      <p className="text-gray-300 text-sm mb-3 line-clamp-3 leading-relaxed">
+      <p className="text-text-primary text-sm mb-3 whitespace-pre-wrap">
         {post.content}
       </p>
-      <div className="flex justify-between text-xs text-gray-500">
-        <span>匿名用户</span>
+      <div className="flex items-center justify-between text-xs text-text-secondary">
+        <span>匿名同学</span>
         <div className="flex gap-3">
-          <span>👁️ {post.view_count || 0}</span>
+          <span>❤️ {post.like_count || 0}</span>
           <span>💬 {post.reply_count || 0}</span>
         </div>
+      </div>
+      <div className="mt-2 text-xs text-text-secondary">
+        {new Date(post.created_at).toLocaleString()}
       </div>
     </div>
   )
