@@ -19,7 +19,6 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // 已登录用户自动跳转首页
   React.useEffect(() => {
     if (user) {
       navigate('/', { replace: true })
