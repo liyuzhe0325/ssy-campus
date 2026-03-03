@@ -225,6 +225,9 @@ export async function addAnswer(
   if (error) throw error;
 }
 
+// 别名，兼容 useQuestions.ts 中导入的 createAnswer
+export const createAnswer = addAnswer;
+
 /**
  * 获取相似问题（基于标题模糊匹配）
  * @param title - 当前问题标题
