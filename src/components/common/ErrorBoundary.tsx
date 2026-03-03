@@ -1,11 +1,11 @@
 // ============================
 // 全局错误边界组件
 // 捕获子组件错误，显示备用 UI
-// 依赖：@sentry/react
+// 暂时移除 Sentry 依赖，待安装后再启用
 // ============================
 
 import React from 'react';
-import * as Sentry from '@sentry/react';
+// import * as Sentry from '@sentry/react'; // 临时注释
 import Button from './Button';
 
 interface Props {
@@ -29,8 +29,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // 上报到 Sentry
-    Sentry.captureException(error, { extra: errorInfo });
+    // 暂时不上报 Sentry
     console.error('Uncaught error:', error, errorInfo);
   }
 
