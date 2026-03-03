@@ -1,67 +1,99 @@
-import { useEffect } from 'react'
-import { useAuthStore } from '@/store/authStore'
-import { supabase } from '@/config/supabase'
-import { getProfileByUserId } from '@/services/profileService'
+// ============================
+// 认证 Hook
+// 提供用户状态、登录、登出、刷新 token 等功能
+// ============================
+
+import { useEffect } from 'react';
+import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/config/supabase';
+import { getProfileByUserId } from '@/services/profileService';
 
 export const useAuth = () => {
-  const { user, profile, isLoading, setUser, setProfile, setIsLoading, clearAuth } = useAuthStore()
+  const { user, profile, isLoading, setUser, setProfile, setIsLoading, clearAuth } = useAuthStore();
 
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
+    let subscription: any;
 
     const initAuth = async () => {
-      setIsLoading(true)
+      setIsLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user && mounted) {
-          setUser(user)
-          const profile = await getProfileByUserId(user.id)
-          setProfile(profile)
+        // 获取当前会话
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        if (session?.user && mounted) {
+          setUser(session.user);
+          const profile = await getProfileByUserId(session.user.id);
+          setProfile(profile);
         }
       } catch (error) {
-        console.error('Auth init error:', error)
-        clearAuth()
+        console.error('Auth initialization error:', error);
+        clearAuth();
       } finally {
-        if (mounted) setIsLoading(false)
+        if (mounted) setIsLoading(false);
       }
-    }
+    };
 
-    initAuth()
+    initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return
+    // 监听认证状态变化
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user)
-        const profile = await getProfileByUserId(session.user.id)
-        setProfile(profile)
-        setIsLoading(false)
+        setUser(session.user);
+        try {
+          const profile = await getProfileByUserId(session.user.id);
+          setProfile(profile);
+        } catch (error) {
+          console.error('Error fetching profile after sign in:', error);
+        }
       } else if (event === 'SIGNED_OUT') {
-        clearAuth()
+        clearAuth();
+      } else if (event === 'TOKEN_REFRESHED') {
+        // token 刷新成功，更新用户信息
+        if (session?.user) setUser(session.user);
       }
-    })
+    });
+
+    subscription = authListener?.subscription;
 
     return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
-  }, [setUser, setProfile, setIsLoading, clearAuth])
+      mounted = false;
+      subscription?.unsubscribe();
+    };
+  }, []);
 
-  // 计算用户主题（基于兴趣标签，用于动态UI）
-  const getTheme = () => {
-    if (!profile?.interests) return 'learning'
-    const interests = profile.interests as string[]
-    if (interests.some(i => ['篮球', '社团', '游戏'].includes(i))) return 'interest'
-    if (interests.some(i => ['树洞', '匿名'].includes(i))) return 'private'
-    return 'learning'
-  }
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  };
 
-  const isAdmin = profile?.is_admin || false
+  const signUp = async (email: string, password: string, nickname: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { nickname } },
+    });
+    if (error) throw error;
+    return data;
+  };
+
+  const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
 
   return {
     user,
     profile,
     isLoading,
-    isAdmin,
-    theme: getTheme(),
-  }
-}
+    isAuthenticated: !!user,
+    isAdmin: profile?.is_admin || false,
+    signIn,
+    signUp,
+    signOut,
+  };
+};
