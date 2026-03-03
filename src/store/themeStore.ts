@@ -86,3 +86,21 @@ export const useThemeStore = create<ThemeState>()(
     }
   )
 );
+// 监听 storage 事件，实现多标签页同步
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'theme-storage') {
+      // 重新 hydration
+      useThemeStore.persist.rehydrate();
+      // 重新应用主题
+      const state = useThemeStore.getState();
+      applyThemeVariables(
+        state.currentTheme,
+        state.hueShift,
+        state.saturationScale,
+        state.lightnessScale
+      );
+    }
+  });
+}
+
