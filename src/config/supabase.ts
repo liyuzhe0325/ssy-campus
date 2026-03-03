@@ -1,3 +1,8 @@
+// ============================
+// Supabase 客户端配置
+// 包含重试机制和错误处理
+// ============================
+
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -7,6 +12,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
+// 自定义 fetch 以实现重试
 const fetchWithRetry = async (url: RequestInfo, options: RequestInit = {}, retries = 3) => {
   let lastError: Error | null = null
   for (let i = 0; i < retries; i++) {
@@ -36,6 +42,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
+// 错误处理包装器
 export async function handleSupabaseRequest<T>(
   request: Promise<{ data: T | null; error: any }>
 ): Promise<T | null> {
