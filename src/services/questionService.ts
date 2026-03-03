@@ -1,165 +1,98 @@
 // ============================
-// 问答服务层：对接Supabase questions + answers表
-// 功能：问题列表/详情/发布、回答列表/发布，兼容阶段二所有表结构
-// 状态：默认pending，审核通过为approved
+// 问答// ============================
+// 问答服务（扩展）
+// 添加采纳答案、提交回答、相似问题等
+// 依赖：supabase客户端
 // ============================
 
-import { supabase } from '@/config/supabase'
-import { Database } from '@/types/supabase'
-
-// 问题列表请求参数（分页、筛选、状态）
-export interface QuestionListParams {
-  page: number
-  pageSize: number
-  category?: string
-  authorId?: string
-  status?: 'pending' | 'approved' | 'rejected'
-}
-
-// 问题 & 回答类型（直接对接数据库）
-export type Question = Database['public']['Tables']['questions']['Row']
-export type QuestionInsert = Database['public']['Tables']['questions']['Insert']
-export type Answer = Database['public']['Tables']['answers']['Row']
-export type AnswerInsert = Database['public']['Tables']['answers']['Insert']
+import { supabase } from '@/config/supabase';
+import { handleSupabaseRequest } from '@/config/supabase';
 
 /**
- * 获取问题列表（默认只展示审核通过）
+ * 采纳答案
+ * @param questionId - 问题ID
+ * @param answerId - 被采纳的答案ID
+ * @param userId - 当前用户ID（用于验证权限）
  */
-export const getQuestions = async (params: QuestionListParams) => {
-  try {
-    const { page, pageSize, category, authorId, status = 'approved' } = params
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
+export async function acceptAnswer(
+  questionId: string,
+  answerId: string,
+  userId: string
+): Promise<void> {
+  // 先验证当前用户是否为提问者（可在hook中做，也可在RLS策略中做）
+  // 这里假设由RLS保证
 
-    let query = supabase
-      .from('questions')
-      .select(`
-        *,
-        profiles:author_id (id, username, avatar, grade, role),
-        tags:question_tags (tag:tag_id (*))
-      `)
-      .eq('status', status)
-      .order('created_at', { ascending: false })
-      .range(from, to)
+  // 开启事务（使用Supabase的rpc或顺序执行）
+  // 1. 将问题的 is_solved 设为 true
+  // 2. 将对应答案的 is_accepted 设为 true
+  // 3. 将其他答案的 is_accepted 设为 false（可选）
 
-    if (category) query = query.eq('category', category)
-    if (authorId) query = query.eq('author_id', authorId)
+  const { error } = await supabase.rpc('accept_answer', {
+    p_question_id: questionId,
+    p_answer_id: answerId,
+    p_user_id: userId,
+  });
 
-    const { data, error } = await query
-    if (error) throw error
-
-    // 格式化标签
-    return data?.map(q => ({
-      ...q,
-      tags: q.tags?.map(t => t.tag) || []
-    })) || []
-  } catch (err) {
-    console.error('[问答服务] 获取问题列表错误：', err)
-    return []
-  }
+  if (error) throw error;
 }
 
 /**
- * 获取单个问题详情 + 对应所有回答
+ * 添加回答
+ * @param questionId - 问题ID
+ * @param userId - 回答者ID
+ * @param content - 回答内容（HTML）
  */
-export const getQuestionById = async (questionId: string) => {
-  try {
-    // 1. 获取问题本体
-    const { data: question, error: qErr } = await supabase
-      .from('questions')
-      .select(`
-        *,
-        profiles:author_id (id, username, avatar, grade, role),
-        tags:question_tags (tag:tag_id (*))
-      `)
-      .eq('id', questionId)
-      .single()
-
-    if (qErr || !question) throw qErr
-
-    // 2. 获取该问题的所有回答（按时间正序）
-    const { data: answers, error: aErr } = await supabase
-      .from('answers')
-      .select(`
-        *,
-        profiles:author_id (id, username, avatar, grade, role)
-      `)
-      .eq('question_id', questionId)
-      .order('created_at', { ascending: true })
-
-    if (aErr) throw aErr
-
-    // 3. 合并返回
-    return {
-      ...question,
-      tags: question.tags?.map(t => t.tag) || [],
-      answers: answers || []
-    }
-  } catch (err) {
-    console.error('[问答服务] 获取问题详情错误：', err)
-    return null
-  }
+export async function addAnswer(
+  questionId: string,
+  userId: string,
+  content: string
+): Promise<void> {
+  await handleSupabaseRequest(
+    supabase.from('answers').insert({
+      question_id: questionId,
+      user_id: userId,
+      content,
+    })
+  );
 }
 
 /**
- * 发布新问题（默认pending待审核）
+ * 获取相似问题（基于标题模糊匹配）
+ * @param title - 当前问题标题
+ * @param excludeId - 排除的问题ID
+ * @param limit - 返回数量
  */
-export const createQuestion = async (question: QuestionInsert) => {
-  try {
-    const { data, error } = await supabase
-      .from('questions')
-      .insert([{
-        ...question,
-        status: 'pending',
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
+export async function getSimilarQuestions(
+  title: string,
+  excludeId?: string,
+  limit = 5
+) {
+  // 使用 PostgreSQL 全文检索
+  let query = supabase
+    .from('questions')
+    .select(`
+      id,
+      title,
+      answer_count,
+      created_at
+    `)
+    .eq('status', 'approved')
+    .textSearch('title', title, { config: 'chinese' }) // 使用中文分词
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
-    if (error) throw error
-    return data
-  } catch (err) {
-    console.error('[问答服务] 发布问题错误：', err)
-    return null
+  if (excludeId) {
+    query = query.neq('id', excludeId);
   }
+
+  const data = await handleSupabaseRequest(query);
+  return data;
 }
 
 /**
- * 发布回答（对接answers表）
+ * 增加问题浏览量
+ * @param questionId - 问题ID
  */
-export const createAnswer = async (answer: AnswerInsert) => {
-  try {
-    const { data, error } = await supabase
-      .from('answers')
-      .insert([{
-        ...answer,
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  } catch (err) {
-    console.error('[问答服务] 发布回答错误：', err)
-    return null
-  }
+export async function incrementQuestionViewCount(questionId: string): Promise<void> {
+  await supabase.rpc('increment_question_view', { question_id: questionId });
 }
-
-/**
- * 删除问题（仅作者/管理员）
- */
-export const deleteQuestion = async (id: string) => {
-  try {
-    const { error } = await supabase.from('questions').delete().eq('id', id)
-    if (error) throw error
-    return true
-  } catch (err) {
-    console.error('[问答服务] 删除问题错误：', err)
-    return false
-  }
-}
-
-// 兼容别名（统一风格）
-export const getQuestionList = getQuestions
-export const getQuestionDetail = getQuestionById
