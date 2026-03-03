@@ -53,6 +53,9 @@ export async function checkIsFollowing(followerId: string, followingId: string):
   return !!data;
 }
 
+// 别名，兼容旧代码（如 useFollow.ts 中导入 isFollowing）
+export const isFollowing = checkIsFollowing;
+
 /**
  * 获取用户的粉丝数
  * @param userId - 用户ID
