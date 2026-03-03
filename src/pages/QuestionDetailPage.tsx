@@ -1,83 +1,238 @@
 // ============================
-// 问题详情页（含回答区）
-// 路径：/question/:id
-// 功能：展示问题、作者、所有回答、发布回答
+// 问答详情页
+// 展示问题内容、回答列表，支持采纳最佳答案、回答等功能
+// 依赖：useQuestion hook，AnswerItem组件
+// 样式：使用主题变量
 // ============================
 
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuestions } from '@/hooks/useQuestions'
-import { useAuth } from '@/hooks/useAuth'
-import AnswerSection from '@/components/answers/AnswerSection'
-import Loading from '@/components/common/Loading'
-import Button from '@/components/common/Button'
-import toast from 'react-hot-toast'
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuestion } from '@/hooks/useQuestion';
+import { formatDate } from '@/utils/dateUtils';
+import Button from '@/components/common/Button';
+import Loading from '@/components/common/Loading';
+import RichTextEditor from '@/components/common/RichTextEditor'; // 假设有富文本编辑器
+import AnswerItem from '@/components/questions/AnswerItem';
+import SimilarQuestions from '@/components/questions/SimilarQuestions';
 
-const QuestionDetailPage = () => {
-  const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
-  const { user } = useAuth()
-  const { useQuestionById } = useQuestions({ page: 1, pageSize: 10 })
+const QuestionDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const {
+    question,
+    loading,
+    error,
+    acceptAnswer,
+    addAnswer,
+    likeQuestion,
+    unlikeQuestion,
+  } = useQuestion(id!);
 
-  const { data: question, isLoading, error } = useQuestionById(id || '')
-  const isAuthor = user?.id === question?.author_id
+  const [answerContent, setAnswerContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(0);
 
-  // 加载/异常
-  if (isLoading) return <div className="py-10 flex justify-center"><Loading /></div>
+  useEffect(() => {
+    if (question) {
+      setLikeCount(question.like_count || 0);
+      setIsLiked(question.user_liked || false);
+    }
+  }, [question]);
+
+  const handleLike = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      if (isLiked) {
+        await unlikeQuestion(id!);
+        setLikeCount(prev => prev - 1);
+      } else {
+        await likeQuestion(id!);
+        setLikeCount(prev => prev + 1);
+      }
+      setIsLiked(!isLiked);
+    } catch (error) {
+      console.error('点赞失败', error);
+    }
+  };
+
+  const handleAccept = async (answerId: string) => {
+    try {
+      await acceptAnswer(answerId);
+    } catch (error) {
+      console.error('采纳失败', error);
+    }
+  };
+
+  const handleSubmitAnswer = async () => {
+    if (!answerContent.trim()) return;
+    setSubmitting(true);
+    try {
+      await addAnswer(answerContent);
+      setAnswerContent('');
+      // 可刷新回答列表，但 useQuestion 可能已自动更新
+    } catch (error) {
+      console.error('提交回答失败', error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <Loading />;
   if (error || !question) {
     return (
-      <div className="py-10 text-center text-gray-400">
-        <p>问题不存在或加载失败</p>
-        <Button variant="primary" onClick={() => navigate('/questions')}>返回列表</Button>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="text-2xl text-text">问题不存在或已被删除</h1>
+        <Button onClick={() => navigate('/questions')} className="mt-4">
+          返回列表
+        </Button>
       </div>
-    )
+    );
   }
 
+  const isQuestionOwner = user?.id === question.user_id;
+  const sortedAnswers = question.answers?.sort((a: any, b: any) => {
+    // 最佳答案置顶
+    if (a.is_accepted && !b.is_accepted) return -1;
+    if (!a.is_accepted && b.is_accepted) return 1;
+    // 然后按点赞数排序
+    return (b.like_count || 0) - (a.like_count || 0);
+  });
+
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* 问题头部 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">{question.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-gray-400 mb-4">
-          <span>提问者：{question.profiles?.username || '同学'}</span>
-          <span>{new Date(question.created_at).toLocaleDateString()}</span>
-          {isAuthor && (
-            <Button variant="ghost" size="sm" className="text-red-400" onClick={() => {
-              if (window.confirm('确定删除？')) {
-                toast.success('删除成功')
-                navigate('/questions')
-              }
-            }}>删除问题</Button>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex flex-col lg:flex-row lg:space-x-8">
+        {/* 主要内容区 */}
+        <div className="flex-1 max-w-3xl">
+          {/* 问题头部 */}
+          <header className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-heading text-text mb-2">
+              {question.title}
+              {question.is_solved && (
+                <span className="ml-3 text-sm bg-success/20 text-success px-3 py-1 rounded-full">
+                  已解决
+                </span>
+              )}
+            </h1>
+            <div className="flex items-center text-text-secondary text-sm space-x-4">
+              <Link to={`/profile/${question.user?.id}`} className="flex items-center space-x-2 hover:text-primary">
+                {question.user?.avatar_url ? (
+                  <img src={question.user.avatar_url} alt="" className="w-6 h-6 rounded-full" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-primary/20" />
+                )}
+                <span>
+                  {question.user?.nickname}
+                  {question.is_anonymous && '（匿名）'}
+                </span>
+              </Link>
+              <span>·</span>
+              <span>{formatDate(question.created_at)}</span>
+              <span>·</span>
+              <span>{question.view_count || 0} 浏览</span>
+            </div>
+          </header>
+
+          {/* 问题内容 */}
+          <div
+            className="prose prose-invert max-w-none mb-6 p-6 bg-card rounded-card border border-border"
+            dangerouslySetInnerHTML={{ __html: question.content }}
+          />
+
+          {/* 标签 */}
+          {question.tags && question.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {question.tags.map((tag: any) => (
+                <Link
+                  key={tag.id}
+                  to={`/tag/${tag.id}`}
+                  className="px-3 py-1 bg-card border border-border rounded-full text-sm text-text-secondary hover:text-primary"
+                >
+                  {tag.name}
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* 点赞按钮 */}
+          <div className="flex items-center space-x-4 mb-8">
+            <button
+              onClick={handleLike}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-button border ${
+                isLiked
+                  ? 'border-primary text-primary'
+                  : 'border-border text-text-secondary hover:text-text'
+              }`}
+            >
+              <span>{isLiked ? '❤️' : '🤍'}</span>
+              <span>{likeCount}</span>
+            </button>
+          </div>
+
+          {/* 回答列表 */}
+          <div className="mb-8">
+            <h2 className="text-xl font-heading text-text mb-4">
+              {question.answer_count || 0} 个回答
+            </h2>
+            {sortedAnswers && sortedAnswers.length > 0 ? (
+              sortedAnswers.map((answer: any) => (
+                <AnswerItem
+                  key={answer.id}
+                  answer={answer}
+                  questionUserId={question.user_id}
+                  onAccept={handleAccept}
+                  canAccept={isQuestionOwner && !question.is_solved}
+                />
+              ))
+            ) : (
+              <p className="text-text-secondary">还没有回答，快来抢沙发吧~</p>
+            )}
+          </div>
+
+          {/* 撰写回答 */}
+          {user ? (
+            <div className="border border-border rounded-card p-4">
+              <h3 className="text-text font-medium mb-3">撰写你的回答</h3>
+              <RichTextEditor
+                value={answerContent}
+                onChange={setAnswerContent}
+                placeholder="分享你的见解..."
+              />
+              <div className="flex justify-end mt-4">
+                <Button
+                  onClick={handleSubmitAnswer}
+                  loading={submitting}
+                  disabled={!answerContent.trim()}
+                >
+                  提交回答
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 border border-border rounded-card">
+              <p className="text-text-secondary mb-2">登录后可以回答</p>
+              <Button onClick={() => navigate('/login')} variant="outline">
+                去登录
+              </Button>
+            </div>
           )}
         </div>
 
-        {/* 标签 */}
-        <div className="flex gap-2 flex-wrap mb-4">
-          {question.tags?.map(t => (
-            <span key={t.id} className="px-2 py-1 bg-purple-900/20 text-purple-400 rounded text-xs">{t.name}</span>
-          ))}
-        </div>
-      </div>
+        {/* 右侧边栏 */}
+        <aside className="lg:w-80 space-y-6">
+          {/* 相似问题 */}
+          <SimilarQuestions title={question.title} currentQuestionId={question.id} />
 
-      {/* 问题内容 */}
-      <div className="bg-[#1A1F29] rounded-xl p-6 border border-gray-800 mb-6">
-        <p className="text-gray-300 leading-relaxed whitespace-pre-wrap">{question.content}</p>
-      </div>
-
-      {/* 统计 */}
-      <div className="flex gap-6 text-sm text-gray-400 mb-8">
-        <span>👁️ {question.view_count || 0} 浏览</span>
-        <span>❤️ {question.like_count || 0} 点赞</span>
-        <span>💬 {question.answers?.length || 0} 回答</span>
-      </div>
-
-      {/* 回答区（核心） */}
-      <AnswerSection questionId={question.id} />
-
-      <div className="mt-8">
-        <Button variant="ghost" onClick={() => navigate(-1)}>返回上一页</Button>
+          {/* 可添加其他组件如问题状态、分享等 */}
+        </aside>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default QuestionDetailPage
+export default QuestionDetailPage;
