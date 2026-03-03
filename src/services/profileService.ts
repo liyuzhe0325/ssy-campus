@@ -22,6 +22,9 @@ export async function getProfileByUserId(userId: string) {
   return data;
 }
 
+// 别名，兼容旧代码（如 ChatWindow.tsx 中导入 getProfile）
+export const getProfile = getProfileByUserId;
+
 /**
  * 获取用户统计数据（文章数、点赞数、关注数等）
  * @param userId - 用户ID
