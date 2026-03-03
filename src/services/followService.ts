@@ -1,46 +1,138 @@
-import { supabase } from '@/config/supabase'
-import { Profile } from '@/types'
+// ============================
+// 关注服务
+// 处理用户之间的关注/取消关注、关注状态检查
+// 依赖：supabase客户端
+// ============================
 
-export const followUser = async (followerId: string, followingId: string) => {
-  const { error } = await supabase
-    .from('follows')
-    .insert({ follower_id: followerId, following_id: followingId })
-  if (error) throw error
+import { supabase } from '@/config/supabase';
+import { handleSupabaseRequest } from '@/config/supabase';
+
+/**
+ * 关注用户
+ * @param followerId - 关注者ID
+ * @param followingId - 被关注者ID
+ */
+export async function followUser(followerId: string, followingId: string): Promise<void> {
+  await handleSupabaseRequest(
+    supabase
+      .from('follows')
+      .insert({ follower_id: followerId, following_id: followingId })
+  );
 }
 
-export const unfollowUser = async (followerId: string, followingId: string) => {
-  const { error } = await supabase
-    .from('follows')
-    .delete()
-    .match({ follower_id: followerId, following_id: followingId })
-  if (error) throw error
+/**
+ * 取消关注
+ * @param followerId - 关注者ID
+ * @param followingId - 被关注者ID
+ */
+export async function unfollowUser(followerId: string, followingId: string): Promise<void> {
+  await handleSupabaseRequest(
+    supabase
+      .from('follows')
+      .delete()
+      .eq('follower_id', followerId)
+      .eq('following_id', followingId)
+  );
 }
 
-export const isFollowing = async (followerId: string, followingId: string): Promise<boolean> => {
+/**
+ * 检查是否已关注
+ * @param followerId - 关注者ID
+ * @param followingId - 被关注者ID
+ * @returns 是否已关注
+ */
+export async function checkIsFollowing(followerId: string, followingId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('id')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
+
+/**
+ * 获取用户的粉丝数
+ * @param userId - 用户ID
+ */
+export async function getFollowerCount(userId: string): Promise<number> {
   const { count, error } = await supabase
     .from('follows')
     .select('*', { count: 'exact', head: true })
-    .match({ follower_id: followerId, following_id: followingId })
-  if (error) throw error
-  return count ? count > 0 : false
+    .eq('following_id', userId);
+
+  if (error) throw error;
+  return count || 0;
 }
 
-export const getFollowing = async (userId: string): Promise<Profile[]> => {
-  const { data, error } = await supabase
+/**
+ * 获取用户的关注数
+ * @param userId - 用户ID
+ */
+export async function getFollowingCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
     .from('follows')
-    .select('following:profiles!following_id(*)')
-    .eq('follower_id', userId)
+    .select('*', { count: 'exact', head: true })
+    .eq('follower_id', userId);
 
-  if (error) throw error
-  return data.map(item => item.following as unknown as Profile)
+  if (error) throw error;
+  return count || 0;
 }
 
-export const getFollowers = async (userId: string): Promise<Profile[]> => {
+/**
+ * 获取用户的粉丝列表（带分页）
+ * @param userId - 用户ID
+ * @param page - 页码
+ * @param pageSize - 每页数量
+ */
+export async function getFollowers(userId: string, page = 1, pageSize = 20) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
   const { data, error } = await supabase
     .from('follows')
-    .select('follower:profiles!follower_id(*)')
+    .select(`
+      follower_id,
+      profiles:follower_id (
+        id,
+        nickname,
+        avatar_url,
+        bio
+      )
+    `)
     .eq('following_id', userId)
+    .range(from, to)
+    .order('created_at', { ascending: false });
 
-  if (error) throw error
-  return data.map(item => item.follower as unknown as Profile)
+  if (error) throw error;
+  return data.map(item => item.profiles);
+}
+
+/**
+ * 获取用户的关注列表（带分页）
+ * @param userId - 用户ID
+ * @param page - 页码
+ * @param pageSize - 每页数量
+ */
+export async function getFollowing(userId: string, page = 1, pageSize = 20) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data, error } = await supabase
+    .from('follows')
+    .select(`
+      following_id,
+      profiles:following_id (
+        id,
+        nickname,
+        avatar_url,
+        bio
+      )
+    `)
+    .eq('follower_id', userId)
+    .range(from, to)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data.map(item => item.profiles);
 }
