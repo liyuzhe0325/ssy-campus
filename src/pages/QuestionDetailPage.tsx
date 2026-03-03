@@ -1,46 +1,101 @@
 // ============================
 // 问答详情页
-// 展示问题内容、回答列表，支持采纳最佳答案、回答等功能
-// 依赖：useQuestion hook，AnswerItem组件
-// 样式：使用主题变量
+// 展示问题、回答列表，支持采纳、回答、点赞等
+// 使用真实服务：questionService, likeService
 // ============================
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuestion } from '@/hooks/useQuestion';
+import { useToastStore } from '@/store/toastStore';
 import { formatDate } from '@/utils/dateUtils';
 import Button from '@/components/common/Button';
 import Loading from '@/components/common/Loading';
-import RichTextEditor from '@/components/common/RichTextEditor'; // 假设有富文本编辑器
+import RichTextEditor from '@/components/common/RichTextEditor';
 import AnswerItem from '@/components/questions/AnswerItem';
 import SimilarQuestions from '@/components/questions/SimilarQuestions';
+import { getQuestionById, addAnswer, acceptAnswer, incrementQuestionViewCount } from '@/services/questionService';
+import { like, unlike, checkIsLiked } from '@/services/likeService';
+
+interface Answer {
+  id: string;
+  content: string;
+  created_at: string;
+  like_count: number;
+  is_accepted: boolean;
+  user: {
+    id: string;
+    nickname: string;
+    avatar_url?: string;
+    is_verified?: boolean;
+  };
+}
+
+interface Question {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  view_count: number;
+  like_count: number;
+  answer_count: number;
+  is_solved: boolean;
+  user_id: string;
+  user?: {
+    id: string;
+    nickname: string;
+    avatar_url?: string;
+    is_verified?: boolean;
+  };
+  tags?: { id: string; name: string }[];
+  answers?: Answer[];
+}
 
 const QuestionDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const {
-    question,
-    loading,
-    error,
-    acceptAnswer,
-    addAnswer,
-    likeQuestion,
-    unlikeQuestion,
-  } = useQuestion(id!);
+  const { addToast } = useToastStore();
 
-  const [answerContent, setAnswerContent] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [question, setQuestion] = useState<Question | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [answerContent, setAnswerContent] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [answers, setAnswers] = useState<Answer[]>([]);
 
   useEffect(() => {
-    if (question) {
-      setLikeCount(question.like_count || 0);
-      setIsLiked(question.user_liked || false);
-    }
-  }, [question]);
+    if (!id) return;
+
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 获取问题详情（包含答案）
+        const data = await getQuestionById(id);
+        setQuestion(data);
+        setLikeCount(data.like_count || 0);
+        setAnswers(data.answers || []);
+
+        // 增加浏览量
+        await incrementQuestionViewCount(id);
+
+        // 检查当前用户是否已点赞
+        if (user) {
+          const liked = await checkIsLiked(user.id, 'question', id);
+          setIsLiked(liked);
+        }
+      } catch (err: any) {
+        setError(err.message || '获取问题失败');
+        addToast({ type: 'error', message: '获取问题失败' });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id, user]);
 
   const handleLike = async () => {
     if (!user) {
@@ -49,37 +104,53 @@ const QuestionDetailPage: React.FC = () => {
     }
     try {
       if (isLiked) {
-        await unlikeQuestion(id!);
+        await unlike(user.id, 'question', id!);
         setLikeCount(prev => prev - 1);
+        addToast({ type: 'success', message: '已取消点赞' });
       } else {
-        await likeQuestion(id!);
+        await like(user.id, 'question', id!);
         setLikeCount(prev => prev + 1);
+        addToast({ type: 'success', message: '点赞成功' });
       }
       setIsLiked(!isLiked);
     } catch (error) {
-      console.error('点赞失败', error);
-    }
-  };
-
-  const handleAccept = async (answerId: string) => {
-    try {
-      await acceptAnswer(answerId);
-    } catch (error) {
-      console.error('采纳失败', error);
+      addToast({ type: 'error', message: '操作失败，请重试' });
     }
   };
 
   const handleSubmitAnswer = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
     if (!answerContent.trim()) return;
+
     setSubmitting(true);
     try {
-      await addAnswer(answerContent);
+      await addAnswer(id!, user.id, answerContent);
+      // 重新获取答案列表
+      const updated = await getQuestionById(id!);
+      setAnswers(updated.answers || []);
       setAnswerContent('');
-      // 可刷新回答列表，但 useQuestion 可能已自动更新
+      addToast({ type: 'success', message: '回答提交成功' });
     } catch (error) {
-      console.error('提交回答失败', error);
+      addToast({ type: 'error', message: '提交失败，请重试' });
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleAcceptAnswer = async (answerId: string) => {
+    if (!user) return;
+    try {
+      await acceptAnswer(id!, answerId, user.id);
+      // 重新获取数据
+      const updated = await getQuestionById(id!);
+      setQuestion(updated);
+      setAnswers(updated.answers || []);
+      addToast({ type: 'success', message: '已采纳最佳答案' });
+    } catch (error: any) {
+      addToast({ type: 'error', message: error.message || '采纳失败' });
     }
   };
 
@@ -96,7 +167,7 @@ const QuestionDetailPage: React.FC = () => {
   }
 
   const isQuestionOwner = user?.id === question.user_id;
-  const sortedAnswers = question.answers?.sort((a: any, b: any) => {
+  const sortedAnswers = [...answers].sort((a, b) => {
     // 最佳答案置顶
     if (a.is_accepted && !b.is_accepted) return -1;
     if (!a.is_accepted && b.is_accepted) return 1;
@@ -126,10 +197,7 @@ const QuestionDetailPage: React.FC = () => {
                 ) : (
                   <div className="w-6 h-6 rounded-full bg-primary/20" />
                 )}
-                <span>
-                  {question.user?.nickname}
-                  {question.is_anonymous && '（匿名）'}
-                </span>
+                <span>{question.user?.nickname}</span>
               </Link>
               <span>·</span>
               <span>{formatDate(question.created_at)}</span>
@@ -147,7 +215,7 @@ const QuestionDetailPage: React.FC = () => {
           {/* 标签 */}
           {question.tags && question.tags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-6">
-              {question.tags.map((tag: any) => (
+              {question.tags.map((tag) => (
                 <Link
                   key={tag.id}
                   to={`/tag/${tag.id}`}
@@ -177,15 +245,15 @@ const QuestionDetailPage: React.FC = () => {
           {/* 回答列表 */}
           <div className="mb-8">
             <h2 className="text-xl font-heading text-text mb-4">
-              {question.answer_count || 0} 个回答
+              {answers.length} 个回答
             </h2>
-            {sortedAnswers && sortedAnswers.length > 0 ? (
-              sortedAnswers.map((answer: any) => (
+            {sortedAnswers.length > 0 ? (
+              sortedAnswers.map((answer) => (
                 <AnswerItem
                   key={answer.id}
                   answer={answer}
                   questionUserId={question.user_id}
-                  onAccept={handleAccept}
+                  onAccept={handleAcceptAnswer}
                   canAccept={isQuestionOwner && !question.is_solved}
                 />
               ))
@@ -225,10 +293,7 @@ const QuestionDetailPage: React.FC = () => {
 
         {/* 右侧边栏 */}
         <aside className="lg:w-80 space-y-6">
-          {/* 相似问题 */}
           <SimilarQuestions title={question.title} currentQuestionId={question.id} />
-
-          {/* 可添加其他组件如问题状态、分享等 */}
         </aside>
       </div>
     </div>
