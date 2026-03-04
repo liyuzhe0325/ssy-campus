@@ -28,9 +28,9 @@ export default {
         input: 'var(--radius-input)',
       },
       boxShadow: {
-        card: 'var(--box-shadow-card)',
+        card: 'var(--shadow-card)',
       },
     },
   },
   plugins: [],
-}
+};
