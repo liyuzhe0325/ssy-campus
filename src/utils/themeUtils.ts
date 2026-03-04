@@ -82,6 +82,11 @@ export function applyThemeVariables(
     root.style.setProperty('--breathing-intensity', theme.breathingIntensity.toString());
   }
   
+  // 背景图
+  if (theme.backgroundImage) {
+    root.style.setProperty('--bg-image', `url(${theme.backgroundImage})`);
+  }
+  
   // 自定义变量
   if (theme.customVars) {
     Object.entries(theme.customVars).forEach(([key, value]) => {
