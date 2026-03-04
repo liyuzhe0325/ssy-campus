@@ -66,7 +66,7 @@ export const useThemeStore = create<ThemeState>()(
           ? activeDecorations.filter(id => id !== decorationId)
           : [...activeDecorations, decorationId];
         set({ activeDecorations: newDecorations });
-        // 这里可以触发特效组件的更新，暂时不实现
+        // 触发特效更新（可预留）
       },
       
       loadUserPreferences: (prefs) => {
@@ -78,6 +78,10 @@ export const useThemeStore = create<ThemeState>()(
         });
         if (prefs.baseTheme) {
           get().setTheme(prefs.baseTheme);
+        } else {
+          // 即使没有 baseTheme，也应用当前主题的变量
+          const { currentTheme, hueShift, saturationScale, lightnessScale } = get();
+          applyThemeVariables(currentTheme, hueShift, saturationScale, lightnessScale);
         }
       },
     }),
@@ -86,13 +90,12 @@ export const useThemeStore = create<ThemeState>()(
     }
   )
 );
+
 // 监听 storage 事件，实现多标签页同步
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (e) => {
     if (e.key === 'theme-storage') {
-      // 重新 hydration
       useThemeStore.persist.rehydrate();
-      // 重新应用主题
       const state = useThemeStore.getState();
       applyThemeVariables(
         state.currentTheme,
@@ -103,4 +106,3 @@ if (typeof window !== 'undefined') {
     }
   });
 }
-
